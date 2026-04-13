@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Clone File Finder v1.0 [Win98 Edition]</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- No Toolbar - Ultra Compact -->
+
+        <div class="main-layout">
+            <!-- Left: Settings -->
+            <div class="side-panel outset">
+                <div class="panel-header">
+                    <span>Folders to Scan</span>
+                    <button id="add-folder-btn" class="mini-btn">Add</button>
+                </div>
+                <div class="panel-body">
+                    <div id="folder-list" class="inset win-list" style="height: 100px; flex: none;"></div>
+
+                    <div class="panel-header" style="margin-top: 4px;">
+                        <span>Exclusions</span>
+                        <button id="add-exclude-btn" class="mini-btn">Add</button>
+                    </div>
+                    <div id="exclude-list" class="inset win-list" style="height: 100px; flex: none;"></div>
+
+                    <div style="margin-top: 6px;">
+                        <button id="start-scan-btn" class="win98-btn" style="font-weight: bold; width: 100%; justify-content: center;">🔍 START SCAN</button>
+                        <button id="stop-scan-btn" class="win98-btn hidden" style="font-weight: bold; width: 100%; justify-content: center;">🛑 STOP SCAN</button>
+                    </div>
+
+                    <!-- PowerShell Style Progress -->
+                    <div id="terminal-status" class="terminal-box hidden" style="margin-top: 6px; height: 180px; display: flex; flex-direction: column;">
+                        <div id="terminal-header" style="color: #ffff00; border-bottom: 1px dashed #444; padding-bottom: 2px; margin-bottom: 2px; font-weight: bold;">
+                            🔍 0 | ⚠️ 0
+                        </div>
+                        <div id="terminal-logs" style="flex: 1; overflow-y: hidden; display: flex; flex-direction: column-reverse;">
+                            <!-- Activity logs here -->
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 12px; flex: 1; display: flex; flex-direction: column; justify-content: flex-end;">
+                        <div id="portable-badge" class="inset" style="padding: 2px; text-align: center; font-weight: bold; background: #eee;">
+                            WAITING...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Results -->
+            <div class="content-panel outset">
+                <div class="panel-header">
+                    <div style="display: flex; gap: 10px; align-items: center; flex: 1;">
+                        <span>Duplicate Results</span>
+                        <div style="display: flex; gap: 2px;">
+                            <button id="smart-select-btn" class="mini-btn">Smart Select</button>
+                            <button id="deselect-all-btn" class="mini-btn">Deselect</button>
+                            <button id="delete-selected-btn" class="mini-btn" style="background: #fbb; color: black;">Delete</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div id="results-viewport" class="inset win-list">
+                        <div id="results-content">
+                            <div style="padding: 20px; color: gray; text-align: center;">
+                                Click 'Start Scan' to begin.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-field inset" style="flex: 2;">
+                hubungi kami <a href="#" id="tiktok-link" style="color: var(--win-blue);">@tongsolop</a>
+            </div>
+            <div class="status-field inset" style="flex: 1;" id="summary-count">0 files selected</div>
+            <div class="status-field inset" style="flex: 1;" id="summary-size">0 KB total</div>
+        </footer>
+    </div>
+
+    <!-- Classic Modal (Confirmation) -->
+    <div id="modal-overlay" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">
+        <div class="outset" style="background: var(--bg); width: 300px;">
+            <div class="panel-header">Confirm</div>
+            <div style="padding: 20px; text-align: center;">
+                <p id="modal-body">Delete files?</p>
+                <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+                    <button id="modal-cancel-btn" class="win98-btn">Cancel</button>
+                    <button id="modal-confirm-btn" class="win98-btn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>

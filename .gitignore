@@ -1,0 +1,7 @@
+node_modules/
+dist/
+app_data/
+*.exe
+.gemini/
+.env
+*.log

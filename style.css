@@ -1,0 +1,214 @@
+:root {
+    --bg: #c0c0c0;
+    --win-blue: #000080;
+    --win-text: #000000;
+    --win-white: #ffffff;
+    --win-grey-dark: #808080;
+    --win-grey-light: #dfdfdf;
+    --win-grey-darkest: #404040;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Tahoma', 'Arial', sans-serif;
+    font-size: 11px;
+}
+
+body {
+    background: var(--bg);
+    color: var(--win-text);
+    height: 100vh;
+    overflow: hidden;
+    padding: 4px;
+}
+
+/* 3D Borders */
+.outset {
+    border: 2px solid;
+    border-color: var(--win-grey-light) var(--win-grey-darkest) var(--win-grey-darkest) var(--win-grey-light);
+}
+
+.inset {
+    border: 2px solid;
+    border-color: var(--win-grey-dark) var(--win-white) var(--win-white) var(--win-grey-dark);
+    background: var(--win-white);
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 4px;
+}
+
+/* Toolbar / Menu style */
+.toolbar {
+    display: flex;
+    gap: 6px;
+    padding: 2px;
+}
+
+.win98-btn {
+    padding: 2px 12px;
+    background: var(--bg);
+    border: 2px solid;
+    border-color: var(--win-grey-light) var(--win-grey-darkest) var(--win-grey-darkest) var(--win-grey-light);
+    cursor: default;
+    outline: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+}
+
+.win98-btn:active {
+    border-color: var(--win-grey-darkest) var(--win-grey-light) var(--win-grey-light) var(--win-grey-darkest);
+    padding: 3px 11px 1px 13px;
+}
+
+.win98-btn:disabled {
+    color: var(--win-grey-dark);
+}
+
+.mini-btn {
+    padding: 1px 6px;
+    background: var(--bg);
+    border: 1px solid;
+    border-color: var(--win-grey-light) var(--win-grey-darkest) var(--win-grey-darkest) var(--win-grey-light);
+    font-size: 10px;
+    cursor: default;
+    line-height: 1;
+}
+
+.mini-btn:active {
+    border-color: var(--win-grey-darkest) var(--win-grey-light) var(--win-grey-light) var(--win-grey-darkest);
+    padding: 2px 5px 0px 7px;
+}
+
+/* Main Layout Split */
+.main-layout {
+    display: flex;
+    flex: 1;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.side-panel {
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.content-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.panel-header {
+    background: var(--win-blue);
+    color: white;
+    padding: 1px 4px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 18px;
+}
+
+.panel-body {
+    padding: 4px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.terminal-box {
+    background: #012456; /* PowerShell Blue */
+    color: #eeedf0;
+    font-family: 'Consolas', 'Courier New', monospace;
+    padding: 4px;
+    border: 1px solid #000;
+    box-shadow: inset 1px 1px 0 #000, 1px 1px 0 #fff;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 9px;
+}
+
+.log-line {
+    line-height: 1.2;
+    margin-bottom: 2px;
+}
+
+.log-red { color: #ff5555; }
+.log-green { color: #55ff55; }
+.log-yellow { color: #ffff55; }
+.log-cyan { color: #55ffff; }
+
+/* List Areas */
+.win-list {
+    flex: 1;
+    overflow-y: scroll;
+    padding: 2px;
+}
+
+.folder-item {
+    padding: 1px 4px;
+    border-bottom: 1px dotted var(--win-grey-dark);
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Duplicate Group Classic Styles */
+.duplicate-group {
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--win-grey-dark);
+}
+
+.group-header {
+    background: #e0e0e0;
+    padding: 2px 4px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    padding: 1px 4px;
+    gap: 6px;
+}
+
+.file-item:hover { background: #000080; color: white; }
+
+.file-path { color: gray; font-size: 10px; }
+.file-item:hover .file-path { color: #dfdfdf; }
+
+/* Status Bar */
+.status-bar {
+    display: flex;
+    gap: 2px;
+}
+
+.status-field {
+    padding: 1px 4px;
+    background: var(--bg);
+}
+
+.input-win {
+    border: 2px solid;
+    border-color: var(--win-grey-dark) var(--win-white) var(--win-white) var(--win-grey-dark);
+    padding: 2px 4px;
+    outline: none;
+}
+
+.hidden { display: none !important; }
+
+/* Compact Labels */
+label { display: block; margin-bottom: 2px; font-weight: bold; }

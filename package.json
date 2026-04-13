@@ -1,0 +1,32 @@
+{
+  "name": "clone-file-finder",
+  "version": "1.0.0",
+  "description": "Ultra-performance duplicate file finder for PC",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder -w portable"
+  },
+  "keywords": [
+    "duplicate",
+    "finder",
+    "clone",
+    "cleaner",
+    "electron"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.antigravity.clonefinder",
+    "win": {
+      "target": "portable"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}
