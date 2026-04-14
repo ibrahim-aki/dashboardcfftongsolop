@@ -21,6 +21,7 @@ const modalBody = document.getElementById('modal-body');
 const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 const modalCancelBtn = document.getElementById('modal-cancel-btn');
 const terminalStatus = document.getElementById('terminal-status');
+const prioritySelect = document.getElementById('priority-folder-select');
 
 let selectedFolders = [];
 let selectedExcludes = [];
@@ -40,7 +41,9 @@ async function init() {
     } else {
         portableBadge.textContent = 'FIXED MODE (LOCKED)';
         portableBadge.className = 'badge badge-fixed';
-        alert(`Warning: Portable mode restricted. Data saved to AppData.\nError: ${status.error}`);
+        if (status.error) {
+            alert(`Warning: Portable mode restricted. Data saved to AppData.\nError: ${status.error}`);
+        }
     }
 }
 
@@ -299,13 +302,35 @@ window.toggleFileSimple = (checkbox, path, size) => {
 
 smartSelectBtn.addEventListener('click', () => {
     selectedFiles.clear();
+    const tier = parseInt(prioritySelect.value) || 1;
+
     scanResults.forEach(group => {
-        // Urutkan berdasarkan mtime (paling lama pertama)
-        const sortedFiles = [...group.files].sort((a, b) => new Date(a.mtime) - new Date(b.mtime));
-        // Sisakan yang paling lama, pilih sisanya
-        for (let i = 1; i < sortedFiles.length; i++) {
-            selectedFiles.add(sortedFiles[i].path);
+        let filesInGroup = [...group.files];
+        
+        // Sort by modification time (Oldest to Newest)
+        filesInGroup.sort((a, b) => new Date(a.mtime) - new Date(b.mtime));
+
+        let fileToKeep = null;
+
+        if (tier === 1) {
+            fileToKeep = filesInGroup[0];
+        } else if (tier === 2) {
+            fileToKeep = filesInGroup[1] || filesInGroup[0];
+        } else if (tier === 3) {
+            fileToKeep = filesInGroup[2] || filesInGroup[filesInGroup.length - 1];
+        } else if (tier === 4) {
+            fileToKeep = filesInGroup[filesInGroup.length - 1];
         }
+
+        // Just in case
+        if (!fileToKeep) fileToKeep = filesInGroup[0];
+
+        // Mark everything except the one we keep as selected for deletion
+        filesInGroup.forEach(file => {
+            if (file.path !== fileToKeep.path) {
+                selectedFiles.add(file.path);
+            }
+        });
     });
     renderResults();
 });
