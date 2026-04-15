@@ -42,6 +42,14 @@
                     </div>
 
                     <div style="margin-top: 12px; flex: 1; display: flex; flex-direction: column; justify-content: flex-end;">
+                        <div style="margin-bottom: 6px; padding: 4px; background: #ffffd0; border: 1px dashed #cc0; font-size: 10px; color: #660;">
+                            Klik untuk membersihkan file sampah sistem Windows secara instan.
+                        </div>
+                        <button id="quick-clean-btn" class="win98-btn" style="font-weight: bold; width: 100%; justify-content: center; margin-bottom: 4px; background: #eef; color: #008;">⚡ QUICK CLEAN</button>
+                        <div style="margin-bottom: 8px; font-size: 10px; display: flex; align-items: center; gap: 4px; padding: 0 4px;">
+                            <input type="checkbox" id="permanent-delete-chk">
+                            <label for="permanent-delete-chk" style="color: #c00; font-weight: bold;">Hapus Permanen (Tanpa Recycle Bin)</label>
+                        </div>
                         <div id="portable-badge" class="inset" style="padding: 2px; text-align: center; font-weight: bold; background: #eee;">
                             WAITING...
                         </div>
@@ -84,8 +92,12 @@
 
         <!-- Status Bar -->
         <footer class="status-bar">
-            <div class="status-field inset" style="flex: 2;">
+            <div id="status-link" class="status-field inset" style="flex: 2;">
                 hubungi kami <a href="#" id="tiktok-link" style="color: var(--win-blue);">@tongsolop</a>
+            </div>
+            <div id="delete-progress-container" class="status-field inset hidden" style="flex: 2; background: #eee; position: relative; overflow: hidden;">
+                <div id="delete-progress-bar" style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: #000080;"></div>
+                <div id="delete-progress-text" style="position: relative; z-index: 1; color: #000; font-size: 10px; width: 100%; text-align: center; font-weight: bold;">Deleting: 0%</div>
             </div>
             <div class="status-field inset" style="flex: 1;" id="summary-count">0 files selected</div>
             <div class="status-field inset" style="flex: 1;" id="summary-size">0 KB total</div>

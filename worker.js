@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const { folders, excludes } = workerData;
+const { folders, excludes, isJunkScan } = workerData;
 const fileMapBySize = new Map(); // size -> [paths]
 const duplicateGroups = [];
 let totalFilesFound = 0;
@@ -15,8 +15,11 @@ const REPORT_INTERVAL = 150; // ms
 
 function isExcluded(filePath, name) {
     // Default system exclusions (case-insensitive)
-    const systemExcludes = ['system volume information', '$recycle.bin', 'appdata', 'node_modules', '.git', '.gemini'];
+    const systemExcludes = ['system volume information', 'appdata', 'node_modules', '.git', '.gemini'];
     if (systemExcludes.includes(name.toLowerCase())) return true;
+
+    // Khusus Recycle Bin: Hanya blokir jika BUKAN mode junk scan
+    if (!isJunkScan && name.toLowerCase() === '$recycle.bin') return true;
     
     // User exclusions (Precise Path Matching, Case-Insensitive)
     const normalizedPath = path.resolve(filePath).toLowerCase();
@@ -211,13 +214,87 @@ async function processDuplicates() {
 
 async function run() {
     try {
-        for (const folder of folders) {
-            await scanDirectory(folder);
+        if (isJunkScan) {
+            // Mode Sampah: Kelompokkan berdasarkan folder asal
+            for (const folder of folders) {
+                const junkFiles = [];
+                let folderSize = 0;
+                
+                await collectAllFiles(folder, junkFiles);
+                
+                if (junkFiles.length > 0) {
+                    const totalSize = junkFiles.reduce((acc, f) => acc + f.size, 0);
+                    const folderName = path.basename(folder) || folder;
+                    
+                    const group = { 
+                        hash: `JUNK:${folderName}`, 
+                        size: 0, // In junk mode, we don't use 'size each' logic in the same way
+                        isJunk: true,
+                        folderName: folderName,
+                        files: junkFiles 
+                    };
+                    duplicateGroups.push(group);
+                    parentPort.postMessage({ type: 'group-found', data: group });
+                }
+            }
+        } else {
+            // Mode Duplikat (Normal)
+            for (const folder of folders) {
+                await scanDirectory(folder);
+            }
+            await processDuplicates();
         }
-        await processDuplicates();
         parentPort.postMessage({ type: 'done', data: duplicateGroups });
     } catch (err) {
         parentPort.postMessage({ type: 'error', data: err.message });
+    }
+}
+
+async function collectAllFiles(dir, fileList) {
+    try {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isSymbolicLink()) continue;
+
+            if (entry.isDirectory()) {
+                if (!isExcluded(fullPath, entry.name)) {
+                    await collectAllFiles(fullPath, fileList);
+                }
+            } else if (entry.isFile()) {
+                const stats = fs.statSync(fullPath);
+                const size = stats.size;
+                if (size === 0) continue;
+
+                totalFilesFound++;
+                const fileObj = {
+                    path: fullPath,
+                    name: entry.name,
+                    size: size,
+                    mtime: stats.mtime
+                };
+                fileList.push(fileObj);
+
+                // Progress report
+                const now = Date.now();
+                if (now - lastProgressReport > REPORT_INTERVAL) {
+                    parentPort.postMessage({ 
+                        type: 'progress', 
+                        data: { 
+                            phase: 'SCANNING', 
+                            count: totalFilesFound, 
+                            detected: totalFilesFound,
+                            currentFile: fullPath,
+                            isHit: true
+                        } 
+                    });
+                    lastProgressReport = now;
+                }
+            }
+        }
+    } catch (err) {
+        // Skip
     }
 }
 

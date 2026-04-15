@@ -56,6 +56,20 @@ app.whenReady().then(() => {
 
     // Beritahukan status portabel ke renderer
     ipcMain.handle('get-portable-status', () => portableInfo);
+
+    ipcMain.handle('get-junk-paths', () => {
+        const junkFolders = [
+            { id: 'TEMP_USER', name: 'Temp (User)', path: process.env.TEMP },
+            { id: 'TEMP_SYS', name: 'Temp (System)', path: 'C:\\Windows\\Temp' },
+            { id: 'PREFETCH', name: 'Prefetch', path: 'C:\\Windows\\Prefetch' },
+            { id: 'KERNEL', name: 'Live Kernel Reports', path: 'C:\\Windows\\LiveKernelReports' },
+            { id: 'RECYCLE', name: 'Recycle Bin (C:)', path: 'C:\\$Recycle.Bin' },
+            { id: 'WER', name: 'Windows Error Reports', path: 'C:\\ProgramData\\Microsoft\\Windows\\WER' }
+        ];
+
+        // Filter valid paths only
+        return junkFolders.filter(f => f.path && fs.existsSync(f.path));
+    });
 });
 
 // --- IPC HANDLERS ---
@@ -67,11 +81,11 @@ ipcMain.handle('select-folders', async () => {
     return result.filePaths;
 });
 
-ipcMain.on('start-scan', (event, { folders, excludes }) => {
+ipcMain.on('start-scan', (event, { folders, excludes, isJunkScan }) => {
     if (scanWorker) scanWorker.terminate();
 
     scanWorker = new Worker(path.join(__dirname, 'worker.js'), {
-        workerData: { folders, excludes }
+        workerData: { folders, excludes, isJunkScan }
     });
 
     scanWorker.on('message', (msg) => {
@@ -106,6 +120,15 @@ ipcMain.on('stop-scan', () => {
 ipcMain.handle('delete-file', async (event, filePath) => {
     try {
         await shell.trashItem(filePath);
+        return { success: true };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('delete-file-permanently', async (event, filePath) => {
+    try {
+        fs.unlinkSync(filePath);
         return { success: true };
     } catch (err) {
         return { success: false, error: err.message };

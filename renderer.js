@@ -22,6 +22,12 @@ const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 const modalCancelBtn = document.getElementById('modal-cancel-btn');
 const terminalStatus = document.getElementById('terminal-status');
 const prioritySelect = document.getElementById('priority-folder-select');
+const quickCleanBtn = document.getElementById('quick-clean-btn');
+const permanentDeleteChk = document.getElementById('permanent-delete-chk');
+const deleteProgressContainer = document.getElementById('delete-progress-container');
+const deleteProgressBar = document.getElementById('delete-progress-bar');
+const deleteProgressText = document.getElementById('delete-progress-text');
+const statusLink = document.getElementById('status-link');
 
 let selectedFolders = [];
 let selectedExcludes = [];
@@ -112,7 +118,27 @@ startScanBtn.addEventListener('click', () => {
     
     // Gunakan daftar folder pengecualian yang dipilih
     const excludes = [...selectedExcludes];
-    window.api.startScan(selectedFolders, excludes);
+    window.api.startScan(selectedFolders, excludes, false);
+});
+
+quickCleanBtn.addEventListener('click', async () => {
+    isScanning = true;
+    scanResults = [];
+    groupBuffer = [];
+    resultsContent.innerHTML = '';
+    selectedFiles.clear();
+    updateUIForScanning(true);
+    startBufferInterval();
+
+    const junkPaths = await window.api.getJunkPaths();
+    if (!junkPaths || junkPaths.length === 0) {
+        isScanning = false;
+        updateUIForScanning(false);
+        return alert('No junk folders found on this system.');
+    }
+
+    const folders = junkPaths.map(p => p.path);
+    window.api.startScan(folders, [], true); // isJunkScan = true
 });
 
 stopScanBtn.addEventListener('click', () => {
@@ -210,6 +236,7 @@ window.api.onScanError((error) => {
 
 function updateUIForScanning(scanning) {
     startScanBtn.classList.toggle('hidden', scanning);
+    quickCleanBtn.classList.toggle('hidden', scanning);
     stopScanBtn.classList.toggle('hidden', !scanning);
     addFolderBtn.disabled = scanning;
     terminalStatus.classList.remove('hidden'); // Always show when active
@@ -235,10 +262,18 @@ function createGroupElement(group, index) {
     const groupEl = document.createElement('div');
     groupEl.className = 'duplicate-group';
     
+    const headerText = group.isJunk 
+        ? `📂 [JUNK] ${group.folderName} (${group.files.length} files)`
+        : `Group ${index + 1} [${formatSize(group.size)} each]`;
+    
+    const subHeaderText = group.isJunk 
+        ? `Total: ${formatSize(group.files.reduce((a, b) => a + b.size, 0))}`
+        : group.hash.slice(0, 12);
+
     groupEl.innerHTML = `
         <div class="group-header">
-            <span>Group ${index + 1} [${formatSize(group.size)} each]</span>
-            <span class="file-path">${group.hash.slice(0, 12)}</span>
+            <span>${headerText}</span>
+            <span class="file-path">${subHeaderText}</span>
         </div>
         <div>
             ${group.files.map(file => {
@@ -307,30 +342,29 @@ smartSelectBtn.addEventListener('click', () => {
     scanResults.forEach(group => {
         let filesInGroup = [...group.files];
         
-        // Sort by modification time (Oldest to Newest)
-        filesInGroup.sort((a, b) => new Date(a.mtime) - new Date(b.mtime));
-
-        let fileToKeep = null;
-
-        if (tier === 1) {
-            fileToKeep = filesInGroup[0];
-        } else if (tier === 2) {
-            fileToKeep = filesInGroup[1] || filesInGroup[0];
-        } else if (tier === 3) {
-            fileToKeep = filesInGroup[2] || filesInGroup[filesInGroup.length - 1];
-        } else if (tier === 4) {
-            fileToKeep = filesInGroup[filesInGroup.length - 1];
-        }
-
-        // Just in case
-        if (!fileToKeep) fileToKeep = filesInGroup[0];
-
-        // Mark everything except the one we keep as selected for deletion
-        filesInGroup.forEach(file => {
-            if (file.path !== fileToKeep.path) {
+        if (group.isJunk) {
+            // Mode Sampah: Pilih semua tanpa sisa
+            filesInGroup.forEach(file => {
                 selectedFiles.add(file.path);
-            }
-        });
+            });
+        } else {
+            // Mode Duplikat: Sisakan satu file asli
+            filesInGroup.sort((a, b) => new Date(a.mtime) - new Date(b.mtime));
+
+            let fileToKeep = null;
+            if (tier === 1) fileToKeep = filesInGroup[0];
+            else if (tier === 2) fileToKeep = filesInGroup[1] || filesInGroup[0];
+            else if (tier === 3) fileToKeep = filesInGroup[2] || filesInGroup[filesInGroup.length - 1];
+            else if (tier === 4) fileToKeep = filesInGroup[filesInGroup.length - 1];
+
+            if (!fileToKeep) fileToKeep = filesInGroup[0];
+
+            filesInGroup.forEach(file => {
+                if (file.path !== fileToKeep.path) {
+                    selectedFiles.add(file.path);
+                }
+            });
+        }
     });
     renderResults();
 });
@@ -387,22 +421,58 @@ modalConfirmBtn.addEventListener('click', () => {
 
 async function executeDelete() {
     const pathsToDelete = Array.from(selectedFiles);
-    let successCount = 0;
+    const isPermanent = permanentDeleteChk.checked;
+    const totalFiles = pathsToDelete.length;
     
-    for (const path of pathsToDelete) {
-        const res = await window.api.deleteFile(path);
+    let successCount = 0;
+    let failCount = 0;
+    let errors = [];
+    const successfullyDeleted = new Set();
+
+    // Tampilkan Progress UI
+    statusLink.classList.add('hidden');
+    deleteProgressContainer.classList.remove('hidden');
+    
+    for (let i = 0; i < totalFiles; i++) {
+        const path = pathsToDelete[i];
+        
+        // Update Progress Bar
+        const percent = Math.floor(((i + 1) / totalFiles) * 100);
+        deleteProgressBar.style.width = `${percent}%`;
+        deleteProgressText.textContent = `Deleting: ${i + 1}/${totalFiles} (${percent}%)`;
+        
+        // Beri sedikit peluang UI untuk update jika perlu
+        if (i % 5 === 0) await new Promise(r => setTimeout(r, 10));
+
+        const res = isPermanent 
+            ? await window.api.deleteFilePermanently(path)
+            : await window.api.deleteFile(path);
+            
         if (res.success) {
             successCount++;
+            successfullyDeleted.add(path);
+        } else {
+            failCount++;
+            errors.push(`${path.split('\\').pop()}: ${res.error}`);
         }
     }
+
+    // Sembunyikan Progress UI
+    deleteProgressContainer.classList.add('hidden');
+    statusLink.classList.remove('hidden');
     
-    alert(`Successfully moved ${successCount} files to Recycle Bin.`);
+    let message = `Successfully deleted ${successCount} files.`;
+    if (failCount > 0) {
+        message += `\n\n⚠️ Failed to delete ${failCount} files (likely in use):\n` + errors.slice(0, 5).join('\n');
+        if (errors.length > 5) message += '\n...and more.';
+    }
+    alert(message);
     
-    // Refresh results (remove deleted files from state)
+    // Refresh results (remove ONLY successfully deleted files)
     scanResults = scanResults.map(group => ({
         ...group,
-        files: group.files.filter(f => !selectedFiles.has(f.path))
-    })).filter(group => group.files.length > 1);
+        files: group.files.filter(f => !successfullyDeleted.has(f.path))
+    })).filter(group => group.isJunk ? group.files.length > 0 : group.files.length > 1);
     
     selectedFiles.clear();
     renderResults();
