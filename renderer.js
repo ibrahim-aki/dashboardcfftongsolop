@@ -117,7 +117,11 @@ async function init() {
                     updateBanner.classList.remove('hidden');
                     updateText.textContent = data.updateMessage;
                     updateBtn.onclick = () => {
-                        if (data.updateLink) require('electron').shell.openExternal(data.updateLink);
+                        if (data.updateLink) {
+                            let cleanLink = String(data.updateLink).trim();
+                            if (!cleanLink.startsWith('http')) cleanLink = 'https://' + cleanLink;
+                            window.api.openUrl(cleanLink);
+                        }
                     };
                 } else {
                     updateBanner.classList.add('hidden');
@@ -127,7 +131,9 @@ async function init() {
                     donateLinkContainer.classList.remove('hidden');
                     donateUrlLink.onclick = (e) => {
                         e.preventDefault();
-                        require('electron').shell.openExternal(data.link);
+                        let cleanLink = String(data.link).trim();
+                        if (!cleanLink.startsWith('http')) cleanLink = 'https://' + cleanLink;
+                        window.api.openUrl(cleanLink);
                     };
                 } else {
                     donateLinkContainer.classList.add('hidden');
