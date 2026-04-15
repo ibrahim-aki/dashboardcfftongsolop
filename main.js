@@ -3,6 +3,30 @@ const path = require('path');
 const fs = require('fs');
 const { Worker } = require('worker_threads');
 
+// --- CONFIG LOADER ---
+// Development: pakai .env | Production (.exe): pakai firebase-config.js yang di-inject saat build
+let firebaseConfig = {};
+if (!app.isPackaged) {
+    // Mode Development
+    require('dotenv').config();
+    firebaseConfig = {
+        apiKey: process.env.FIREBASE_API_KEY,
+        authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.FIREBASE_APP_ID,
+    };
+} else {
+    // Mode Production (.exe)
+    try {
+        firebaseConfig = require('./firebase-config.js');
+    } catch (e) {
+        console.error('firebase-config.js not found! Run npm run build properly.');
+    }
+}
+
+
 let mainWindow;
 let scanWorker = null;
 
@@ -143,6 +167,19 @@ ipcMain.handle('open-url', async (event, url) => {
     shell.openExternal(url);
 });
 
+ipcMain.handle('get-machine-id', async () => {
+    try {
+        const { execSync } = require('child_process');
+        const output = execSync('wmic csproduct get uuid').toString();
+        // Format output: UUID \n xxxxxxxx-xxxx-...
+        const uuid = output.split('\n')[1].trim();
+        return uuid || 'UNKNOWN_DEVICE';
+    } catch (err) {
+        console.error('Error getting machine id:', err);
+        return 'UNKNOWN_DEVICE_' + Math.random().toString(36).substring(7);
+    }
+});
+
 ipcMain.handle('get-thumbnail', async (event, filePath) => {
     try {
         const thumbnail = await nativeImage.createThumbnailFromPath(filePath, { width: 40, height: 40 });
@@ -151,6 +188,11 @@ ipcMain.handle('get-thumbnail', async (event, filePath) => {
         return null;
     }
 });
+
+ipcMain.handle('get-firebase-config', () => {
+    return firebaseConfig;
+});
+
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

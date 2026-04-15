@@ -219,5 +219,46 @@ body {
 
 .hidden { display: none !important; }
 
+/* Modal Overlay Generic */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+
+
+/* Modal UI Wins */
+.modal-window {
+    background: var(--bg);
+    width: 380px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+}
+
+.modal-body-content {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.donate-btn {
+    background: #ff0;
+    color: #000;
+    font-weight: bold;
+    border: 2px solid;
+    border-color: #fff #880 #880 #fff;
+    padding: 1px 6px;
+    cursor: pointer;
+    font-size: 10px;
+}
+.donate-btn:active {
+    border-color: #880 #fff #fff #880;
+}
+
 /* Compact Labels */
 label { display: block; margin-bottom: 2px; font-weight: bold; }

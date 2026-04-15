@@ -7,6 +7,15 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- UPDATE BANNER -->
+        <div id="update-banner" class="hidden" style="background: #000080; color: white; padding: 3px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #fff; z-index: 100;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 11px;">📢</span>
+                <span id="update-banner-text" style="font-weight: bold; font-size: 10px;">Versi baru tersedia!</span>
+            </div>
+            <button id="update-download-btn" class="win98-btn" style="padding: 0px 8px; font-size: 9px; height: 18px; background: #ffff00; color: #000; font-weight: bold; border-color: #fff #880 #880 #fff;">DOWNLOAD</button>
+        </div>
+        
         <!-- No Toolbar - Ultra Compact -->
 
         <div class="main-layout">
@@ -48,7 +57,7 @@
                         <button id="quick-clean-btn" class="win98-btn" style="font-weight: bold; width: 100%; justify-content: center; margin-bottom: 4px; background: #eef; color: #008;">⚡ QUICK CLEAN</button>
                         <div style="margin-bottom: 8px; font-size: 10px; display: flex; align-items: center; gap: 4px; padding: 0 4px;">
                             <input type="checkbox" id="permanent-delete-chk">
-                            <label for="permanent-delete-chk" style="color: #c00; font-weight: bold;">Hapus Permanen (Tanpa Recycle Bin)</label>
+                            <label for="permanent-delete-chk" style="color: #c00; font-weight: bold;">Hapus Permanen</label>
                         </div>
                         <div id="portable-badge" class="inset" style="padding: 2px; text-align: center; font-weight: bold; background: #eee;">
                             WAITING...
@@ -72,10 +81,11 @@
                             </select>
                         </div>
                         <div style="display: flex; gap: 2px;">
-                            <button id="smart-select-btn" class="mini-btn">Smart Select</button>
+                            <button id="smart-select-btn" class="mini-btn premium-locked-btn" title="Hanya untuk donatur">Smart Select</button>
                             <button id="deselect-all-btn" class="mini-btn">Deselect</button>
                             <button id="delete-selected-btn" class="mini-btn" style="background: #fbb; color: black;">Delete</button>
                         </div>
+                        <button id="open-donate-modal" class="donate-btn" style="margin-left: 10px;">⚡ DONASI</button>
                     </div>
                 </div>
                 <div class="panel-body">
@@ -104,8 +114,83 @@
         </footer>
     </div>
 
+    <!-- 1. Modal Registrasi (Pilih Nama & Email) -->
+    <div id="register-modal" class="modal-overlay hidden">
+        <div class="modal-window outset">
+            <div class="panel-header">Registrasi Aplikasi</div>
+            <div class="modal-body-content">
+                <p>Silakan isi data diri Anda untuk menggunakan aplikasi ini. Satu registrasi berlaku untuk satu PC.</p>
+                <div>
+                    <label>Nama Lengkap:</label>
+                    <input type="text" id="reg-name" class="input-win" style="width: 100%;" placeholder="Contoh: Budi Santoso">
+                </div>
+                <div>
+                    <label>Email Utama:</label>
+                    <input type="email" id="reg-email" class="input-win" style="width: 100%;" placeholder="budi@example.com">
+                    <p style="font-size: 9px; color: red; margin-top: 2px;">* Gunakan email aktif untuk pemberitahuan/konfirmasi update.</p>
+                </div>
+                <div style="margin-top: 10px; text-align: center;">
+                    <button id="submit-register-btn" class="win98-btn" style="width: 100%; justify-content: center; font-weight: bold;">DAFTAR SEKARANG</button>
+                    <p id="reg-error" style="color: red; font-size: 10px; margin-top: 5px;" class="hidden"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Smart Select (Freemium Habis) -->
+    <div id="smart-select-modal" class="modal-overlay hidden">
+        <div class="modal-window outset" style="width: 380px;">
+            <div class="panel-header">
+                <span>Smart Select</span>
+                <button onclick="document.getElementById('smart-select-modal').classList.add('hidden')" class="mini-btn">X</button>
+            </div>
+            <div class="modal-body-content" style="padding: 15px;">
+                <p style="font-size: 11px; line-height: 1.7; color: #333; background: #fffde7; border: 1px solid #f9a825; border-radius: 4px; padding: 12px;">
+                    Fitur Smart Select sangat membantu Anda menyeleksi ribuan file secara otomatis. Donasi se ikhlasnya dari anda membantu kami mengembangkan aplikasi ini lebih lanjut. untuk berdonasi silahkan tekan tombol donasi yang ada di aplikasi.
+                </p>
+                <div style="margin-top: 12px; text-align: right;">
+                    <button onclick="document.getElementById('smart-select-modal').classList.add('hidden')" class="win98-btn">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Modal Donasi (Tutorial & Bukti) -->
+    <div id="donate-modal" class="modal-overlay hidden">
+        <div class="modal-window outset" style="width: 420px;">
+            <div class="panel-header">
+                <span>Donasi & Aktivasi Premium</span>
+                <button id="close-donate-modal" class="mini-btn">X</button>
+            </div>
+            <div class="modal-body-content" style="max-height: 450px; overflow-y: auto;">
+                
+                <div style="text-align: center; border-bottom: 1px solid #808080; padding-bottom: 10px;">
+                    <p style="font-weight: bold; margin-bottom: 5px;">Scan QR Saweria untuk Donasi:</p>
+                    <div class="inset" style="padding: 10px; background: white; display: inline-block;">
+                        <img id="donate-qr-img" src="assets/saweria-qr.png" alt="Saweria QR" style="width: 200px; height: 200px;">
+                    </div>
+                    <div id="donate-link-container" class="hidden" style="margin-top: 8px;">
+                        <p style="font-size: 10px; margin-bottom: 2px;">Atau klik link di bawah ini:</p>
+                        <a id="donate-url-link" href="#" style="font-size: 11px; color: blue; font-weight: bold; text-decoration: underline;">BAYAR LEWAT WEB</a>
+                    </div>
+                </div>
+
+                <div>
+                    <p style="font-weight: bold;">Upload Bukti Donasi:</p>
+                    <p style="font-size: 10px; color: #555;">Kirim screenshot transfer untuk aktivasi.</p>
+                    <input type="file" id="proof-image" accept="image/*" style="margin-top: 5px; font-size: 10px;">
+                </div>
+
+                <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px;">
+                    <button id="submit-proof-btn" class="win98-btn" style="width: 100%; justify-content: center; background: #e0ffd0; font-weight: bold;">KIRIM BUKTI DONASI</button>
+                    <p style="font-size: 9px; text-align: center; color: #808080;">Aktivasi dilakukan manual oleh admin melalui dashboard dalam 1x24 jam.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Classic Modal (Confirmation) -->
-    <div id="modal-overlay" class="modal-overlay hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">
+    <div id="modal-overlay" class="modal-overlay hidden">
         <div class="outset" style="background: var(--bg); width: 300px;">
             <div class="panel-header">Confirm</div>
             <div style="padding: 20px; text-align: center;">
@@ -117,6 +202,10 @@
             </div>
         </div>
     </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <script src="renderer.js"></script>
 </body>

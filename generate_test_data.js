@@ -26,7 +26,7 @@ createFile('duplicate_2_A.txt', contentA);
 
 // 3. File dengan Ukuran Sama tapi Isi Berbeda (Pass 2 test: Partial Hash)
 // Isinya sama panjangnya (51 karakter), tapi ada beda 1 karakter di akhir
-const contentB = "Konten Spesifik A - Ini adalah file asli yang unik!"; 
+const contentB = "Konten Spesifik A - Ini adalah file asli yang unik!";
 createFile('fake_duplicate.txt', contentB);
 
 // 4. File Konten Lain

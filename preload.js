@@ -14,5 +14,8 @@ contextBridge.exposeInMainWorld('api', {
     openLocation: (filePath) => ipcRenderer.invoke('open-location', filePath),
     openUrl: (url) => ipcRenderer.invoke('open-url', url),
     getThumbnail: (path) => ipcRenderer.invoke('get-thumbnail', path),
-    getJunkPaths: () => ipcRenderer.invoke('get-junk-paths')
+    getJunkPaths: () => ipcRenderer.invoke('get-junk-paths'),
+    getMachineId: () => ipcRenderer.invoke('get-machine-id'),
+    getFirebaseConfig: () => ipcRenderer.invoke('get-firebase-config')
 });
+

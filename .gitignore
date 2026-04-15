@@ -1,7 +1,13 @@
 node_modules/
 dist/
+.env
+.env.local
+.env.*.local
+config.js
 app_data/
 *.exe
 .gemini/
 .env
 *.log
+firebase-config.js
+renderer.original.js

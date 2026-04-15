@@ -5,7 +5,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder -w portable"
+    "build": "node scripts/build.js"
   },
   "keywords": [
     "duplicate",
@@ -18,7 +18,8 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^30.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "javascript-obfuscator": "^5.4.1"
   },
   "build": {
     "appId": "com.antigravity.clonefinder",
@@ -28,5 +29,9 @@
     "directories": {
       "output": "dist"
     }
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "firebase": "^12.12.0"
   }
 }

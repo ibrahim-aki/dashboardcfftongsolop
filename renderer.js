@@ -1,6 +1,23 @@
+// --- FIREBASE INITIALIZATION ---
+let firebaseConfig = null;
+let db = null;
+
+
+// --- STATE VARIABLES ---
+let machineId = null;
+let userProfile = null;
+let isPremium = false;
+let selectedFolders = [];
+let selectedExcludes = [];
+let scanResults = []; // Array of groups: { hash, size, files }
+let selectedFiles = new Set(); // Map of file paths
+let isScanning = false;
+let groupBuffer = []; // Buffer for incremental rendering
+let bufferInterval = null;
+
+// --- DOM ELEMENTS ---
 const folderListEl = document.getElementById('folder-list');
 const addFolderBtn = document.getElementById('add-folder-btn');
-const excludeInput = document.getElementById('exclude-input');
 const startScanBtn = document.getElementById('start-scan-btn');
 const stopScanBtn = document.getElementById('stop-scan-btn');
 const resultsContent = document.getElementById('results-content');
@@ -29,17 +46,45 @@ const deleteProgressBar = document.getElementById('delete-progress-bar');
 const deleteProgressText = document.getElementById('delete-progress-text');
 const statusLink = document.getElementById('status-link');
 
-let selectedFolders = [];
-let selectedExcludes = [];
-let scanResults = []; // Array of groups: { hash, size, files }
-let selectedFiles = new Set(); // Map of file paths
-let isScanning = false;
-let groupBuffer = []; // Buffer for incremental rendering
-let bufferInterval = null;
+// Premium Elements
+const regModal = document.getElementById('register-modal');
+const donateModal = document.getElementById('donate-modal');
+const submitRegBtn = document.getElementById('submit-register-btn');
+const regNameInput = document.getElementById('reg-name');
+const regEmailInput = document.getElementById('reg-email');
+const regErrorMsg = document.getElementById('reg-error');
+const openDonateBtn = document.getElementById('open-donate-modal');
+const closeDonateBtn = document.getElementById('close-donate-modal');
+const submitProofBtn = document.getElementById('submit-proof-btn');
+const proofImageInput = document.getElementById('proof-image');
+const donateQrImg = document.getElementById('donate-qr-img');
+const donateLinkContainer = document.getElementById('donate-link-container');
+const donateUrlLink = document.getElementById('donate-url-link');
+
+let trialDays = 0; // Global trial days from settings
 
 // --- INITIALIZATION ---
 
 async function init() {
+    console.log("Initializing application...");
+    // 0. Initialize Firebase from .env
+    firebaseConfig = await window.api.getFirebaseConfig();
+    
+    if (typeof firebase !== 'undefined' && firebaseConfig && firebaseConfig.apiKey) {
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            console.log("Firebase initialized successfully");
+        } catch (err) {
+            console.error("Firebase init error:", err);
+        }
+    }
+
+    // 1. Get Machine ID
+    machineId = await window.api.getMachineId();
+    console.log("Device ID:", machineId);
+
+    // 2. Check Portable Status
     const status = await window.api.getPortableStatus();
     if (status.portable) {
         portableBadge.textContent = 'PORTABLE MODE';
@@ -47,9 +92,92 @@ async function init() {
     } else {
         portableBadge.textContent = 'FIXED MODE (LOCKED)';
         portableBadge.className = 'badge badge-fixed';
-        if (status.error) {
-            alert(`Warning: Portable mode restricted. Data saved to AppData.\nError: ${status.error}`);
+    }
+
+    // 2. Load Donation Settings (QR & Link) Real-time
+    if (db) {
+        db.collection('settings').doc('donation').onSnapshot(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                if (data.qrUrl) {
+                    donateQrImg.src = data.qrUrl;
+                }
+                if (data.trialDurationDays !== undefined) {
+                    trialDays = data.trialDurationDays;
+                } else {
+                    trialDays = 14; 
+                }
+
+                // Handle Update Banner
+                const updateBanner = document.getElementById('update-banner');
+                const updateText = document.getElementById('update-banner-text');
+                const updateBtn = document.getElementById('update-download-btn');
+
+                if (data.updateMessage) {
+                    updateBanner.classList.remove('hidden');
+                    updateText.textContent = data.updateMessage;
+                    updateBtn.onclick = () => {
+                        if (data.updateLink) require('electron').shell.openExternal(data.updateLink);
+                    };
+                } else {
+                    updateBanner.classList.add('hidden');
+                }
+
+                if (data.link) {
+                    donateLinkContainer.classList.remove('hidden');
+                    donateUrlLink.onclick = (e) => {
+                        e.preventDefault();
+                        require('electron').shell.openExternal(data.link);
+                    };
+                } else {
+                    donateLinkContainer.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    // 3. Check Registration in Firebase
+    if (db) {
+        try {
+            console.log("Checking database for machineId...");
+            // Tambahkan timeout agar tidak stuck jika koneksi lambat
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firebase Timeout")), 6000));
+            const fetchDocPromise = db.collection('users').doc(machineId).get();
+            
+            const doc = await Promise.race([fetchDocPromise, timeoutPromise]);
+            
+            if (doc && doc.exists) {
+                userProfile = doc.data();
+                isPremium = userProfile.isPremium === true;
+                console.log("User found. Premium state:", isPremium);
+                
+                // Update Badge dengan Email dan Status
+                const statusText = isPremium ? 'DONATUR' : 'FREE';
+                portableBadge.textContent = `${userProfile.email} | ${statusText}`;
+                portableBadge.style.color = isPremium ? '#008000' : '#444'; // Hijau untuk donatur
+
+                if (isPremium) {
+                    smartSelectBtn.classList.remove('premium-locked-btn');
+                    smartSelectBtn.title = 'Saran seleksi otomatis';
+                }
+            } else {
+                console.log("MachineId not registered. Showing modal.");
+                portableBadge.textContent = 'STATUS: GUEST (BELUM DAFTAR)';
+                regModal.classList.remove('hidden');
+            }
+        } catch (err) {
+            console.error("Firebase connection / registration check failed:", err);
+            portableBadge.textContent = 'OFFLINE / CONNECTION ERROR';
+            // Fallback: Jika gagal cek (misal timeout), paksa tampilkan registrasi
+            regModal.classList.remove('hidden');
+            if (typeof addTerminalLog === 'function') {
+                addTerminalLog("Database Connection Failed. Check Internet.", "log-red");
+            }
         }
+    } else {
+        console.error("Firebase DB not initialized. Check .env config.");
+        portableBadge.textContent = 'DATABASE ERROR';
+        regModal.classList.remove('hidden');
     }
 }
 
@@ -100,6 +228,150 @@ window.removeExclude = (path) => {
     selectedExcludes = selectedExcludes.filter(f => f !== path);
     renderExcludeList();
 };
+
+// --- PREMIUM & REGISTRATION LOGIC ---
+
+submitRegBtn.addEventListener('click', async () => {
+    const name = regNameInput.value.trim();
+    const email = regEmailInput.value.trim();
+
+    if (!name || !email) {
+        regErrorMsg.textContent = "Nama dan Email wajib diisi!";
+        regErrorMsg.classList.remove('hidden');
+        return;
+    }
+
+    if (!db) return alert("Firebase belum terhubung. Periksa koneksi internet.");
+
+    try {
+        submitRegBtn.disabled = true;
+        submitRegBtn.textContent = "MENDAFTAR...";
+
+        await db.collection('users').doc(machineId).set({
+            name,
+            email,
+            machineId,
+            registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
+            isPremium: false,
+            trialDays: 15, // Langsung punya 15 hari saat daftar
+            status: 'REGISTERED'
+        });
+
+        regModal.classList.add('hidden');
+        alert("Pendaftaran berhasil! Selamat menggunakan aplikasi Clone File Finder.");
+    } catch (err) {
+        console.error("Registration error:", err);
+        regErrorMsg.textContent = "Gagal mendaftar. Coba lagi nanti.";
+        regErrorMsg.classList.remove('hidden');
+    } finally {
+        submitRegBtn.disabled = false;
+        submitRegBtn.textContent = "DAFTAR SEKARANG";
+    }
+});
+
+openDonateBtn.addEventListener('click', () => {
+    donateModal.classList.remove('hidden');
+});
+
+closeDonateBtn.addEventListener('click', () => {
+    donateModal.classList.add('hidden');
+});
+
+// --- IMAGE COMPRESSION HELPER ---
+function compressImage(file, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Max resolution 1200px (width or height)
+                const MAX_SIZE = 1200;
+                if (width > height) {
+                    if (width > MAX_SIZE) {
+                        height *= MAX_SIZE / width;
+                        width = MAX_SIZE;
+                    }
+                } else {
+                    if (height > MAX_SIZE) {
+                        width *= MAX_SIZE / height;
+                        height = MAX_SIZE;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+}
+
+submitProofBtn.addEventListener('click', async () => {
+    const file = proofImageInput.files[0];
+    if (!file) return alert("Pilih file gambar bukti donasi terlebih dahulu.");
+    if (!db) return alert("Database tidak aktif.");
+
+    try {
+        submitProofBtn.disabled = true;
+        submitProofBtn.textContent = "COMPRESSING...";
+
+        // 1. Compress Image
+        const compressedBlob = await compressImage(file);
+        console.log(`Compressed: ${(file.size / 1024).toFixed(2)}KB -> ${(compressedBlob.size / 1024).toFixed(2)}KB`);
+
+        submitProofBtn.textContent = "UPLOADING...";
+
+        // 2. Cloudinary Upload
+        const CLOUD_NAME = "dsbryri1d";
+        const UPLOAD_PRESET = "buktidonasi";
+
+        const formData = new FormData();
+        formData.append("file", compressedBlob, "proof.jpg");
+        formData.append("upload_preset", UPLOAD_PRESET);
+
+        const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/dsbryri1d/image/upload`, {
+            method: "POST",
+            body: formData
+        });
+
+        if (!uploadRes.ok) {
+            const errorData = await uploadRes.json();
+            throw new Error(errorData.error ? errorData.error.message : "Upload to Cloudinary failed");
+        }
+
+        const uploadData = await uploadRes.json();
+
+        // Update User Doc with Proof URL from Cloudinary
+        await db.collection('users').doc(machineId).update({
+            status: 'WAITING_APPROVAL',
+            proofUrl: uploadData.secure_url,
+            proofPublicId: uploadData.public_id,
+            proofSentAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        alert("Terima kasih banyak atas dukungannya! Bukti donasi Anda telah kami terima. Admin akan melakukan aktivasi dalam waktu 1x24 jam. Mohon tunggu kabar baik dari kami.");
+        donateModal.classList.add('hidden');
+    } catch (err) {
+        console.error("Upload error:", err);
+        alert("Gagal mengupload bukti: " + err.message);
+    } finally {
+        submitProofBtn.disabled = false;
+        submitProofBtn.textContent = "KIRIM BUKTI DONASI";
+    }
+});
 
 // --- SCANNING ---
 
@@ -355,6 +627,22 @@ window.toggleFileSimple = (checkbox, path, size) => {
 };
 
 smartSelectBtn.addEventListener('click', () => {
+    // Izin berdasarkan status Premium atau sisa hari Trial (Freemium)
+    let canUseSmartSelect = isPremium;
+
+    if (!isPremium && userProfile) {
+        const userTrial = userProfile.trialDays !== undefined ? userProfile.trialDays : 15;
+        if (userTrial > 0) {
+            canUseSmartSelect = true;
+            console.log(`User Freemium aktif: sisa ${userTrial} hari.`);
+        }
+    }
+
+    if (!canUseSmartSelect) {
+        document.getElementById('smart-select-modal').classList.remove('hidden');
+        return;
+    }
+
     selectedFiles.clear();
     const tier = parseInt(prioritySelect.value) || 1;
 
