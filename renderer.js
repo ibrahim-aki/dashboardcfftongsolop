@@ -262,16 +262,18 @@ function createGroupElement(group, index) {
     const groupEl = document.createElement('div');
     groupEl.className = 'duplicate-group';
     
-    const headerText = group.isJunk 
-        ? `📂 [JUNK] ${group.folderName} (${group.files.length} files)`
-        : `Group ${index + 1} [${formatSize(group.size)} each]`;
+    const headerText = group.isCleaned
+        ? `✅ [CLEANED] Original Kept (${group.files.length} file)`
+        : (group.isJunk 
+            ? `📂 [JUNK] ${group.folderName} (${group.files.length} files)`
+            : `Group ${index + 1} [${formatSize(group.size)} each]`);
     
     const subHeaderText = group.isJunk 
         ? `Total: ${formatSize(group.files.reduce((a, b) => a + b.size, 0))}`
-        : group.hash.slice(0, 12);
+        : (group.isCleaned ? 'All duplicates removed' : group.hash.slice(0, 12));
 
     groupEl.innerHTML = `
-        <div class="group-header">
+        <div class="group-header" style="${group.isCleaned ? 'background: #d0ffd0; color: #006600;' : ''}">
             <span>${headerText}</span>
             <span class="file-path">${subHeaderText}</span>
         </div>
@@ -279,17 +281,21 @@ function createGroupElement(group, index) {
             ${group.files.map(file => {
                 const ext = file.path.split('.').pop().toUpperCase();
                 const isMedia = ['JPG', 'JPEG', 'PNG', 'GIF', 'MP4', 'MKV', 'AVI'].includes(ext);
+                const isSelected = selectedFiles.has(file.path);
+                const isSaved = group.isCleaned;
                 
                 return `
-                <div class="file-item">
-                    <input type="checkbox" style="margin-right: 4px;" ${selectedFiles.has(file.path) ? 'checked' : ''} 
+                <div class="file-item" style="${isSaved ? 'background: #f0fff0;' : ''}">
+                    <input type="checkbox" style="margin-right: 4px;" 
+                        ${isSelected ? 'checked' : ''} 
+                        ${isSaved ? 'disabled' : ''}
                         onchange="toggleFileSimple(this, '${file.path.replace(/\\/g, '\\\\')}', ${file.size})">
                     
                     <div class="thumb-box inset" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; margin-right: 4px;">
                         ${isMedia ? `<img class="lazy-thumb" data-path="${file.path.replace(/\\/g, '\\\\')}" style="max-width: 100%; max-height: 100%; display: none;">` : '📄'}
                     </div>
 
-                    <span style="flex: 2; cursor: default; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${file.name}">${file.name}</span>
+                    <span style="flex: 2; cursor: default; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isSaved ? 'color: #008800; font-weight: bold;' : ''}" title="${file.name}">${isSaved ? '[SAVED] ' : ''}${file.name}</span>
                     <span style="width: 40px; color: var(--win-blue); font-weight: bold; text-align: center;">${ext}</span>
                     <span class="file-path" style="flex: 3;">${file.path.slice(0, 50)}...</span>
                     <span style="font-size: 9px; color: #808080; width: 60px;">${new Date(file.mtime).toLocaleDateString()}</span>
@@ -469,10 +475,21 @@ async function executeDelete() {
     alert(message);
     
     // Refresh results (remove ONLY successfully deleted files)
-    scanResults = scanResults.map(group => ({
-        ...group,
-        files: group.files.filter(f => !successfullyDeleted.has(f.path))
-    })).filter(group => group.isJunk ? group.files.length > 0 : group.files.length > 1);
+    scanResults = scanResults.map(group => {
+        const remainingFiles = group.files.filter(f => !successfullyDeleted.has(f.path));
+        // Jika tadinya duplikat (>1) dan sekarang sisa 1, tandai sebagai cleaned
+        const wasCleaned = !group.isJunk && group.files.length > 1 && remainingFiles.length === 1;
+        
+        return {
+            ...group,
+            files: remainingFiles,
+            isCleaned: group.isCleaned || wasCleaned
+        };
+    }).filter(group => {
+        if (group.isJunk) return group.files.length > 0;
+        // Tetap tampilkan jika masih duplikat (>1) ATAU jika sudah bersih (isCleaned)
+        return group.files.length > 1 || group.isCleaned;
+    });
     
     selectedFiles.clear();
     renderResults();
