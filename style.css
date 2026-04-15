@@ -179,16 +179,25 @@ body {
 }
 
 .file-item {
-    display: flex;
+    display: grid;
+    grid-template-columns: 16px 18px 2fr 40px 3fr 70px 32px;
     align-items: center;
-    padding: 1px 4px;
-    gap: 6px;
+    padding: 2px 4px;
+    gap: 4px;
+    height: 22px;
 }
 
-.file-item:hover { background: #000080; color: white; }
+.file-item:hover { background: #000080; color: white !important; }
+
+.ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
 
 .file-path { color: gray; font-size: 10px; }
-.file-item:hover .file-path { color: #dfdfdf; }
+.file-item:hover .file-path { color: #ccc; }
 
 /* Status Bar */
 .status-bar {

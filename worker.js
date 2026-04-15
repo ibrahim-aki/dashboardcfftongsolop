@@ -14,21 +14,38 @@ const REPORT_INTERVAL = 150; // ms
 // --- UTILS ---
 
 function isExcluded(filePath, name) {
-    // Default system exclusions (case-insensitive)
-    const systemExcludes = ['system volume information', 'appdata', 'node_modules', '.git', '.gemini'];
-    if (systemExcludes.includes(name.toLowerCase())) return true;
+    const lowerPath = path.resolve(filePath).toLowerCase();
+    const lowerName = name.toLowerCase();
 
-    // Khusus Recycle Bin: Hanya blokir jika BUKAN mode junk scan
-    if (!isJunkScan && name.toLowerCase() === '$recycle.bin') return true;
+    // 1. Blacklist Nama Folder (Basename Check)
+    const systemNames = ['system volume information', 'appdata', 'node_modules', '.git', '.gemini', 'recovery'];
+    if (systemNames.includes(lowerName)) return true;
+
+    // 2. Blacklist Path Penuh (Absolute Path Check)
+    // Mencegah aplikasi masuk ke folder sistem utama secara sengaja/tidak sengaja
+    const systemPaths = [
+        '\\windows',
+        '\\program files',
+        '\\program files (x86)',
+        '\\$recycle.bin'
+    ];
+
+    for (const sysPath of systemPaths) {
+        // Cek apakah path saat ini berada di dalam folder sistem (misal C:\Windows\System32)
+        // Kita gunakan .includes() dengan separator untuk akurasi (\windows\)
+        if (lowerPath.includes(sysPath + path.sep) || lowerPath.endsWith(sysPath)) {
+            // Pengecualian Khusus: Jika ini adalah JUNK SCAN, kita izinkan path tertentu
+            // Meskipun berada di dalam folder Windows/AppData
+            if (isJunkScan) return false; 
+            return true;
+        }
+    }
     
-    // User exclusions (Precise Path Matching, Case-Insensitive)
-    const normalizedPath = path.resolve(filePath).toLowerCase();
+    // 3. User exclusions (Precise Path Matching)
     for (const pattern of excludes) {
         if (!pattern) continue;
         const normalizedPattern = path.resolve(pattern).toLowerCase();
-        
-        // Match if it's the target folder OR a parent of it
-        if (normalizedPath === normalizedPattern || normalizedPath.startsWith(normalizedPattern + path.sep)) {
+        if (lowerPath === normalizedPattern || lowerPath.startsWith(normalizedPattern + path.sep)) {
             return true;
         }
     }

@@ -279,26 +279,39 @@ function createGroupElement(group, index) {
         </div>
         <div>
             ${group.files.map(file => {
-                const ext = file.path.split('.').pop().toUpperCase();
-                const isMedia = ['JPG', 'JPEG', 'PNG', 'GIF', 'MP4', 'MKV', 'AVI'].includes(ext);
+                const hasExt = file.name.includes('.');
+                const rawExt = hasExt ? file.name.split('.').pop().toUpperCase() : 'FILE';
+                const isMedia = ['JPG', 'JPEG', 'PNG', 'GIF', 'MP4', 'MKV', 'AVI'].includes(rawExt);
+                
+                // Cegah teks ekstensi merusak grid (batas max 6 huruf visual)
+                const ext = rawExt.length > 6 ? rawExt.slice(0, 5) + '..' : rawExt;
+                
                 const isSelected = selectedFiles.has(file.path);
                 const isSaved = group.isCleaned;
                 
                 return `
                 <div class="file-item" style="${isSaved ? 'background: #f0fff0;' : ''}">
-                    <input type="checkbox" style="margin-right: 4px;" 
+                    <input type="checkbox" style="margin: 0;" 
                         ${isSelected ? 'checked' : ''} 
                         ${isSaved ? 'disabled' : ''}
                         onchange="toggleFileSimple(this, '${file.path.replace(/\\/g, '\\\\')}', ${file.size})">
                     
-                    <div class="thumb-box inset" style="width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; margin-right: 4px;">
+                    <div class="thumb-box inset" style="display: flex; align-items: center; justify-content: center; height: 100%;">
                         ${isMedia ? `<img class="lazy-thumb" data-path="${file.path.replace(/\\/g, '\\\\')}" style="max-width: 100%; max-height: 100%; display: none;">` : '📄'}
                     </div>
 
-                    <span style="flex: 2; cursor: default; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${isSaved ? 'color: #008800; font-weight: bold;' : ''}" title="${file.name}">${isSaved ? '[SAVED] ' : ''}${file.name}</span>
-                    <span style="width: 40px; color: var(--win-blue); font-weight: bold; text-align: center;">${ext}</span>
-                    <span class="file-path" style="flex: 3;">${file.path.slice(0, 50)}...</span>
-                    <span style="font-size: 9px; color: #808080; width: 60px;">${new Date(file.mtime).toLocaleDateString()}</span>
+                    <div class="ellipsis" style="${isSaved ? 'color: #008800; font-weight: bold;' : ''}" title="${file.name}">
+                        ${isSaved ? '[SAVED] ' : ''}${file.name}
+                    </div>
+                    
+                    <div class="ellipsis" style="color: var(--win-blue); font-weight: bold; text-align: center;" title="${rawExt}">${ext}</div>
+                    
+                    <div class="file-path ellipsis">${file.path}</div>
+                    
+                    <div style="font-size: 9px; color: #808080; text-align: right; padding-right: 4px;">
+                        ${new Date(file.mtime).toLocaleDateString()}
+                    </div>
+                    
                     <button class="mini-btn" title="Open Folder" onclick="window.api.openLocation('${file.path.replace(/\\/g, '\\\\')}')">Dir</button>
                 </div>
                 `;
