@@ -159,25 +159,26 @@ async function init() {
 }
 
 async function checkRegistration() {
-    // A. Handle Force Update & Global Settings
+    // A. Real-time Settings Listener (QR, Link, Update, Trial Duration)
     if (db) {
-        try {
-            const settingsDoc = await db.collection('settings').doc('donation').get();
-            if (settingsDoc.exists) {
-                const data = settingsDoc.data();
+        db.collection('settings').doc('donation').onSnapshot(doc => {
+            if (doc.exists) {
+                const data = doc.data();
                 
-                // FORCE UPDATE CHECK (PRIORITAS UTAMA)
+                // 1. FORCE UPDATE CHECK (LOCKED)
                 if (data.updateLink && data.forceUpdate === true) {
                     forceUpdateModal.classList.remove('hidden');
                     forceDownloadBtn.onclick = () => window.api.openUrl(data.updateLink);
-                    return; // LOCK APLIKASI
+                    // Kita tidak mereturn di sini agar listener tetap jalan jika nanti dimatikan admin
+                } else {
+                    forceUpdateModal.classList.add('hidden');
                 }
 
-                // Global Settings Sync
+                // 2. Global Settings Sync
                 trialDays = data.trialDurationDays || 15;
                 if (data.qrUrl) donateQrImg.src = data.qrUrl;
 
-                // Restoring missing Donation Link logic
+                // 3. Donation Link logic
                 if (data.link) {
                     donateLinkContainer.classList.remove('hidden');
                     donateUrlLink.onclick = (e) => {
@@ -190,14 +191,12 @@ async function checkRegistration() {
                     donateLinkContainer.classList.add('hidden');
                 }
                 
-                // Update Banner (Non-Force)
+                // 4. Update Banner (Non-Force)
                 const updateBanner = document.getElementById('update-banner');
                 const updateBtn = document.getElementById('update-download-btn');
                 if (data.updateMessage && !data.forceUpdate) {
                     updateBanner.classList.remove('hidden');
                     document.getElementById('update-banner-text').textContent = data.updateMessage;
-                    
-                    // Sembunyikan tombol jika link kosong
                     if (data.updateLink) {
                         updateBtn.classList.remove('hidden');
                         updateBtn.onclick = () => window.api.openUrl(data.updateLink);
@@ -208,7 +207,7 @@ async function checkRegistration() {
                     updateBanner.classList.add('hidden');
                 }
             }
-        } catch (e) { console.warn("Could not fetch global settings:", e); }
+        });
     }
 
     // B. Check User Status (Hybrid: Cache vs Cloud)
