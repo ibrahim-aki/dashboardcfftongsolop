@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clone File Finder - Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Login Screen -->
+        <div id="login-container" class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h1>Admin Login</h1>
+                    <p>Manage your users and activation proofs</p>
+                </div>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="email" name="email" placeholder="admin@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="password" name="password" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Sign In</button>
+                    <p id="login-error" class="error-text hidden"></p>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen (Hidden initially) -->
+        <div id="dashboard-container" class="dashboard-container hidden">
+            <aside class="sidebar">
+                <div class="sidebar-header">
+                    <span class="logo">CFF Admin</span>
+                </div>
+                <nav class="sidebar-nav">
+                    <a href="#" class="nav-item active" data-view="users">Users Management</a>
+                    <a href="#" class="nav-item" data-view="settings">Donation Settings</a>
+                    <a href="#" class="nav-item" data-view="updates">App Updates</a>
+                    <a href="#" class="nav-item" id="logout-btn">Logout</a>
+                </nav>
+            </aside>
+
+            <main class="main-content">
+                <header class="top-header">
+                    <h2>Users Management</h2>
+                    <div class="header-stats">
+                        <div class="stat-pill">Total: <span id="stat-total">0</span></div>
+                        <div class="stat-pill pending">Pending: <span id="stat-pending">0</span></div>
+                    </div>
+                </header>
+
+                <section id="view-users" class="table-section scrollable">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Hardware ID</th>
+                                <th>Proof</th>
+                                <th>Trial</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-table-body">
+                            <!-- Rows will be injected here -->
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- SECTION SETTINGS (BARU) -->
+                <section id="view-settings" class="table-section hidden">
+                    <div class="settings-card">
+                        <h3>Donation QR & Link</h3>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                            Atur gambar QR (Saweria/Qris) dan link donasi yang akan tampil di aplikasi pengguna.
+                        </p>
+                        
+                        <div class="form-group">
+                            <label>Current QR Image</label>
+                            <div id="qr-preview-container" class="qr-preview">
+                                <img id="current-qr-img" src="" alt="No QR Set">
+                                <p id="no-qr-msg" class="hidden">Belum ada QR yang diatur</p>
+                            </div>
+                            <div class="btn-group" style="margin-top: 10px;">
+                                <input type="file" id="new-qr-input" accept="image/*" style="display: none;">
+                                <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('new-qr-input').click()">UPLOAD QR BARU</button>
+                                <button type="button" id="delete-qr-btn" class="btn btn-danger btn-sm hidden">HAPUS QR</button>
+                            </div>
+                        </div>
+
+
+                        <div class="form-group" style="margin-top: 20px;">
+                            <label>Link Donasi (Saweria / QRIS / dll)</label>
+                            <input type="url" id="donation-link-input" placeholder="https://saweria.co/..." 
+                                style="width: 100%; border: 1px solid var(--border); padding: 12px; border-radius: 8px;">
+                            <p style="font-size: 11px; color: var(--text-muted); margin-top: 5px;">Link ini akan tampil sebagai alternatif QR di aplikasi user.</p>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 20px;">
+                            <button id="save-settings-btn" class="btn btn-success" style="width: auto;">SIMPAN PENGATURAN DONASI</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION UPDATES (MANDIRI) -->
+                <section id="view-updates" class="table-section hidden">
+                    <div class="settings-container" style="background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+                        <h2 style="margin-bottom: 20px;">📢 App Update Announcement</h2>
+                        <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 25px;">
+                            Gunakan halaman ini untuk memberitahukan seluruh user jika ada versi aplikasi terbaru atau perbaikan bug penting.
+                        </p>
+
+                        <div class="form-group">
+                            <label>Pesan Pembaruan</label>
+                            <textarea id="update-message-input" rows="3" placeholder="Contoh: Versi 1.1 tersedia! Menambahkan fitur filter foto buram." style="width: 100%; border: 1px solid var(--border); padding: 12px; border-radius: 8px; font-family: inherit; margin-bottom: 15px;"></textarea>
+                            
+                            <label>Link Download Versi Baru</label>
+                            <input type="url" id="update-link-input" placeholder="https://..." style="width: 100%; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                            
+                            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 20px;">
+                                <i>Tips: Kosongkan Pesan Pembaruan jika Anda ingin menyembunyikan banner pengumuman di aplikasi user.</i>
+                            </p>
+
+                            <button id="publish-update-btn" class="btn btn-primary" style="width: auto; padding: 12px 30px; background: #000080;">PUBLIKASIKAN UPDATE SEKARANG</button>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Proof Modal -->
+    <div id="proof-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Donation Proof</h3>
+                <button class="close-btn" onclick="closeProofModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <img id="modal-proof-img" src="" alt="Proof Image">
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Crypto JS for Cloudinary Signatures -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    
+    <script type="module" src="/admin.js"></script>
+</body>
+</html>

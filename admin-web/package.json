@@ -1,0 +1,26 @@
+{
+  "name": "admin-web",
+  "version": "1.0.0",
+  "main": "admin.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibrahim-aki/dashboardcfftongsolop.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ibrahim-aki/dashboardcfftongsolop/issues"
+  },
+  "homepage": "https://github.com/ibrahim-aki/dashboardcfftongsolop#readme",
+  "description": "",
+  "devDependencies": {
+    "vite": "^8.0.8"
+  }
+}
