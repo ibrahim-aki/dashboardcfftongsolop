@@ -62,128 +62,218 @@ const donateLinkContainer = document.getElementById('donate-link-container');
 const donateUrlLink = document.getElementById('donate-url-link');
 
 let trialDays = 0; // Global trial days from settings
+let isOffline = false;
+
+const forceUpdateModal = document.getElementById('force-update-modal');
+const forceDownloadBtn = document.getElementById('force-download-btn');
+
+// --- UTILS ---
+const getCacheKey = () => `cff_cache_${machineId ? machineId.substring(0, 8) : 'guest'}`;
+
+function saveLocalProfile(profile) {
+    if (!machineId) return;
+    const data = {
+        profile,
+        lastOnlineCheck: Date.now(),
+        hwid: machineId
+    };
+    localStorage.setItem(getCacheKey(), JSON.stringify(data));
+}
+
+function getLocalProfile() {
+    const raw = localStorage.getItem(getCacheKey());
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(raw);
+        // Validasi HWID (Anti-bajak)
+        if (parsed.hwid !== machineId) return null;
+        return parsed;
+    } catch (e) { return null; }
+}
+
+function queueUsageData(fileCount, sizeBytes) {
+    const stats = JSON.parse(localStorage.getItem('cff_pending_stats') || '{"files":0, "size":0}');
+    stats.files += fileCount;
+    stats.size += sizeBytes;
+    localStorage.setItem('cff_pending_stats', JSON.stringify(stats));
+    syncUsageData();
+}
+
+async function syncUsageData() {
+    if (!db || !machineId || navigator.onLine === false) return;
+    
+    const raw = localStorage.getItem('cff_pending_stats');
+    if (!raw) return;
+    
+    const stats = JSON.parse(raw);
+    if (stats.files <= 0) return;
+
+    try {
+        await db.collection('users').doc(machineId).update({
+            totalFilesCleaned: firebase.firestore.FieldValue.increment(stats.files),
+            totalSizeSaved: firebase.firestore.FieldValue.increment(stats.size)
+        });
+        // Reset tabungan jika sukses
+        localStorage.setItem('cff_pending_stats', JSON.stringify({files:0, size:0}));
+        console.log("Statistics synced to cloud.");
+    } catch (err) {
+        console.error("Sync stats failed:", err);
+    }
+}
+
 
 // --- INITIALIZATION ---
 
 async function init() {
     console.log("Initializing application...");
-    // 0. Initialize Firebase from .env
-    firebaseConfig = await window.api.getFirebaseConfig();
     
+    // 0. Get Machine ID first
+    machineId = await window.api.getMachineId();
+    console.log("Device ID:", machineId);
+
+    // 1. Initialize Firebase
+    firebaseConfig = await window.api.getFirebaseConfig();
     if (typeof firebase !== 'undefined' && firebaseConfig && firebaseConfig.apiKey) {
         try {
             firebase.initializeApp(firebaseConfig);
             db = firebase.firestore();
-            console.log("Firebase initialized successfully");
-        } catch (err) {
-            console.error("Firebase init error:", err);
-        }
+        } catch (err) { console.error("Firebase init error:", err); }
     }
 
-    // 1. Get Machine ID
-    machineId = await window.api.getMachineId();
-    console.log("Device ID:", machineId);
+    // 2. Network Listener
+    window.addEventListener('online', () => {
+        isOffline = false;
+        console.log("Internet back online. Syncing...");
+        syncUsageData();
+        // Refresh init data
+        checkRegistration();
+    });
+    window.addEventListener('offline', () => {
+        isOffline = true;
+        portableBadge.textContent = 'OFFLINE MODE';
+        portableBadge.classList.add('status-badge-offline');
+    });
 
-    // 2. Check Portable Status
-    const status = await window.api.getPortableStatus();
-    if (status.portable) {
-        portableBadge.textContent = 'PORTABLE MODE';
-        portableBadge.className = 'badge badge-portable';
-    } else {
-        portableBadge.textContent = 'FIXED MODE (LOCKED)';
-        portableBadge.className = 'badge badge-fixed';
-    }
+    // 3. Main Logic
+    await checkRegistration();
+}
 
-    // 2. Load Donation Settings (QR & Link) Real-time
+async function checkRegistration() {
+    // A. Handle Force Update & Global Settings
     if (db) {
-        db.collection('settings').doc('donation').onSnapshot(doc => {
-            if (doc.exists) {
-                const data = doc.data();
-                if (data.qrUrl) {
-                    donateQrImg.src = data.qrUrl;
-                }
-                if (data.trialDurationDays !== undefined) {
-                    trialDays = data.trialDurationDays;
-                } else {
-                    trialDays = 14; 
+        try {
+            const settingsDoc = await db.collection('settings').doc('donation').get();
+            if (settingsDoc.exists) {
+                const data = settingsDoc.data();
+                
+                // FORCE UPDATE CHECK (PRIORITAS UTAMA)
+                if (data.updateLink && data.forceUpdate === true) {
+                    forceUpdateModal.classList.remove('hidden');
+                    forceDownloadBtn.onclick = () => window.api.openUrl(data.updateLink);
+                    return; // LOCK APLIKASI
                 }
 
-                // Handle Update Banner
+                // Global Settings Sync
+                trialDays = data.trialDurationDays || 15;
+                if (data.qrUrl) donateQrImg.src = data.qrUrl;
+                
+                // Update Banner (Non-Force)
                 const updateBanner = document.getElementById('update-banner');
-                const updateText = document.getElementById('update-banner-text');
                 const updateBtn = document.getElementById('update-download-btn');
-
-                if (data.updateMessage) {
+                if (data.updateMessage && !data.forceUpdate) {
                     updateBanner.classList.remove('hidden');
-                    updateText.textContent = data.updateMessage;
-                    updateBtn.onclick = () => {
-                        if (data.updateLink) {
-                            let cleanLink = String(data.updateLink).trim();
-                            if (!cleanLink.startsWith('http')) cleanLink = 'https://' + cleanLink;
-                            window.api.openUrl(cleanLink);
-                        }
-                    };
+                    document.getElementById('update-banner-text').textContent = data.updateMessage;
+                    
+                    // Sembunyikan tombol jika link kosong
+                    if (data.updateLink) {
+                        updateBtn.classList.remove('hidden');
+                        updateBtn.onclick = () => window.api.openUrl(data.updateLink);
+                    } else {
+                        updateBtn.classList.add('hidden');
+                    }
                 } else {
                     updateBanner.classList.add('hidden');
                 }
-
-                if (data.link) {
-                    donateLinkContainer.classList.remove('hidden');
-                    donateUrlLink.onclick = (e) => {
-                        e.preventDefault();
-                        let cleanLink = String(data.link).trim();
-                        if (!cleanLink.startsWith('http')) cleanLink = 'https://' + cleanLink;
-                        window.api.openUrl(cleanLink);
-                    };
-                } else {
-                    donateLinkContainer.classList.add('hidden');
-                }
             }
-        });
+        } catch (e) { console.warn("Could not fetch global settings:", e); }
     }
 
-    // 3. Check Registration in Firebase
-    if (db) {
-        try {
-            console.log("Checking database for machineId...");
-            // Tambahkan timeout agar tidak stuck jika koneksi lambat
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Firebase Timeout")), 6000));
-            const fetchDocPromise = db.collection('users').doc(machineId).get();
-            
-            const doc = await Promise.race([fetchDocPromise, timeoutPromise]);
-            
-            if (doc && doc.exists) {
-                userProfile = doc.data();
-                isPremium = userProfile.isPremium === true;
-                console.log("User found. Premium state:", isPremium);
-                
-                // Update Badge dengan Email dan Status
-                const statusText = isPremium ? 'DONATUR' : 'FREE';
-                portableBadge.textContent = `${userProfile.email} | ${statusText}`;
-                portableBadge.style.color = isPremium ? '#008000' : '#444'; // Hijau untuk donatur
+    // B. Check User Status (Hybrid: Cache vs Cloud)
+    let profile = null;
+    let fromCache = false;
+    let cloudCheckSuccess = false; // Apakah cloud berhasil dihubungi?
 
-                if (isPremium) {
-                    smartSelectBtn.classList.remove('premium-locked-btn');
-                    smartSelectBtn.title = 'Saran seleksi otomatis';
-                }
+    if (navigator.onLine && db) {
+        try {
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000));
+            const doc = await Promise.race([db.collection('users').doc(machineId).get(), timeoutPromise]);
+            cloudCheckSuccess = true; // Cloud BERHASIL dihubungi
+            
+            if (doc.exists) {
+                profile = doc.data();
+                saveLocalProfile(profile); // Update Cache
+                console.log("Profile fetched from Cloud");
             } else {
-                console.log("MachineId not registered. Showing modal.");
-                portableBadge.textContent = 'STATUS: GUEST (BELUM DAFTAR)';
-                regModal.classList.remove('hidden');
+                // User TIDAK ADA di cloud (dihapus oleh admin)
+                // Hapus cache lokal agar tidak bisa masuk lagi
+                localStorage.removeItem(getCacheKey());
+                console.log("User deleted from cloud. Cache cleared.");
             }
-        } catch (err) {
-            console.error("Firebase connection / registration check failed:", err);
-            portableBadge.textContent = 'OFFLINE / CONNECTION ERROR';
-            // Fallback: Jika gagal cek (misal timeout), paksa tampilkan registrasi
-            regModal.classList.remove('hidden');
-            if (typeof addTerminalLog === 'function') {
-                addTerminalLog("Database Connection Failed. Check Internet.", "log-red");
-            }
+        } catch (err) { 
+            console.warn("Cloud check failed, falling back to cache..."); 
         }
+    }
+
+    // Cache HANYA dipakai jika cloud GAGAL dihubungi (offline/timeout)
+    if (!profile && !cloudCheckSuccess) {
+        const cached = getLocalProfile();
+        if (cached) {
+            profile = cached.profile;
+            fromCache = true;
+            console.log("Using cached profile (offline mode)");
+        }
+    }
+
+    // C. Apply Profile
+    if (profile) {
+        userProfile = profile;
+        isPremium = userProfile.isPremium === true;
+        
+        const statusText = isPremium ? 'DONATUR' : 'FREE';
+        portableBadge.textContent = `${userProfile.email} | ${statusText} ${fromCache ? '(OFFLINE)' : ''}`;
+        if (fromCache) portableBadge.classList.add('status-badge-offline');
+        
+        if (isPremium) {
+            smartSelectBtn.classList.remove('premium-locked-btn');
+            smartSelectBtn.title = 'Saran seleksi otomatis';
+        }
+
+        // AUTO DECREMENT TRIAL (Jika Online)
+        if (!isPremium && !fromCache) {
+            handleTrialCountdown(profile);
+        }
+
     } else {
-        console.error("Firebase DB not initialized. Check .env config.");
-        portableBadge.textContent = 'DATABASE ERROR';
+        // User Baru / Belum Daftar
+        portableBadge.textContent = 'STATUS: GUEST (BELUM DAFTAR)';
         regModal.classList.remove('hidden');
+    }
+    
+    syncUsageData();
+}
+
+async function handleTrialCountdown(profile) {
+    const lastCheck = profile.lastDecrementDate || "";
+    const today = new Date().toISOString().split('T')[0];
+
+    if (lastCheck !== today && profile.trialDays > 0) {
+        try {
+            await db.collection('users').doc(machineId).update({
+                trialDays: firebase.firestore.FieldValue.increment(-1),
+                lastDecrementDate: today
+            });
+            console.log("Trial decremented for today.");
+        } catch (e) { console.error("Decrement failed:", e); }
     }
 }
 
@@ -738,9 +828,14 @@ async function executeDelete() {
     const totalFiles = pathsToDelete.length;
     
     let successCount = 0;
+    let successSize = 0; // Tambahkan tracker size
     let failCount = 0;
     let errors = [];
     const successfullyDeleted = new Set();
+
+    // Map untuk mencari size file berdasarkan path dengan cepat
+    const fileMap = new Map();
+    scanResults.forEach(g => g.files.forEach(f => fileMap.set(f.path, f.size)));
 
     // Tampilkan Progress UI
     statusLink.classList.add('hidden');
@@ -763,11 +858,17 @@ async function executeDelete() {
             
         if (res.success) {
             successCount++;
+            successSize += (fileMap.get(path) || 0); // Tambah size sukses
             successfullyDeleted.add(path);
         } else {
             failCount++;
             errors.push(`${path.split('\\').pop()}: ${res.error}`);
         }
+    }
+
+    // KIRIM STATISTIK KE ANTREAN (OFFLINE FRIENDLY)
+    if (successCount > 0) {
+        queueUsageData(successCount, successSize);
     }
 
     // Sembunyikan Progress UI

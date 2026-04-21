@@ -49,8 +49,9 @@
                 <header class="top-header">
                     <h2>Users Management</h2>
                     <div class="header-stats">
-                        <div class="stat-pill">Total: <span id="stat-total">0</span></div>
+                        <div class="stat-pill">Total Users: <span id="stat-total">0</span></div>
                         <div class="stat-pill pending">Pending: <span id="stat-pending">0</span></div>
+                        <div class="stat-pill" style="background: #008000; color: white;">Total Cleaned: <span id="stat-impact-files">0</span></div>
                     </div>
                 </header>
 
@@ -60,8 +61,8 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Email</th>
-                                <th>Hardware ID</th>
-                                <th>Proof</th>
+                                <th>HWID</th>
+                                <th>Impact (Files/Size)</th>
                                 <th>Trial</th>
                                 <th>Status</th>
                                 <th>Action</th>
@@ -80,6 +81,13 @@
                         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
                             Atur gambar QR (Saweria/Qris) dan link donasi yang akan tampil di aplikasi pengguna.
                         </p>
+
+                        <div class="form-group" style="margin-bottom: 25px; background: #f0f7ff; padding: 15px; border-radius: 8px; border: 1px solid #cce5ff;">
+                            <label style="color: #004085;">Default Trial Days (New Users)</label>
+                            <input type="number" id="trial-duration-input" placeholder="15" 
+                                style="width: 80px; border: 1px solid #004085; padding: 8px; border-radius: 4px;">
+                            <p style="font-size: 11px; color: #004085; margin-top: 5px;">Berapa hari trial yang didapatkan user baru saat pertama kali daftar.</p>
+                        </div>
                         
                         <div class="form-group">
                             <label>Current QR Image</label>
@@ -115,6 +123,15 @@
                         <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 25px;">
                             Gunakan halaman ini untuk memberitahukan seluruh user jika ada versi aplikasi terbaru atau perbaikan bug penting.
                         </p>
+
+                        <div class="form-group" style="background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" id="force-update-chk" style="width: 20px; height: 20px; cursor: pointer;">
+                                <label for="force-update-chk" style="margin-bottom: 0; cursor: pointer; color: #856404; font-weight: bold;">
+                                    FORCE UPDATE (User wajib download untuk bisa lanjut scan)
+                                </label>
+                            </div>
+                        </div>
 
                         <div class="form-group">
                             <label>Pesan Pembaruan</label>

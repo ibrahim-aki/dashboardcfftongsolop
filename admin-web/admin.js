@@ -54,7 +54,11 @@ const deleteQrBtn = document.getElementById('delete-qr-btn');
 const donationLinkInput = document.getElementById('donation-link-input');
 const updateMessageInput = document.getElementById('update-message-input');
 const updateLinkInput = document.getElementById('update-link-input');
+const forceUpdateChk = document.getElementById('force-update-chk');
+const trialDurationInput = document.getElementById('trial-duration-input');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
+const statImpactFiles = document.getElementById('stat-impact-files');
+
 
 let donationSettings = { qrUrl: '', qrPublicId: '', link: '' };
 
@@ -191,12 +195,16 @@ async function loadUsers() {
 function renderTable(docs) {
     userTableBody.innerHTML = '';
     let pendingCount = 0;
+    let totalFiles = 0;
+    let totalSize = 0;
 
     docs.forEach(doc => {
         const user = doc.data();
         const id = doc.id;
         
         if (user.status === 'WAITING_APPROVAL') pendingCount++;
+        totalFiles += (user.totalFilesCleaned || 0);
+        totalSize += (user.totalSizeSaved || 0);
 
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -204,7 +212,9 @@ function renderTable(docs) {
             <td>${user.email || '-'}</td>
             <td style="font-family: monospace; font-size: 11px;">${id}</td>
             <td>
-                ${user.proofUrl ? `<a href="#" class="action-link" onclick="viewProof('${user.proofUrl}')">Lihat Bukti</a>` : '-'}
+                <div style="font-weight: bold; color: #008000;">${user.totalFilesCleaned || 0} files</div>
+                <div style="font-size: 10px; color: #666;">${formatSize(user.totalSizeSaved || 0)}</div>
+                ${user.proofUrl ? `<a href="#" class="action-link" style="font-size: 9px;" onclick="viewProof('${user.proofUrl}')">Lihat Bukti</a>` : ''}
             </td>
             <td>
                 <input type="number" value="${user.trialDays !== undefined ? user.trialDays : 14}" 
@@ -232,6 +242,15 @@ function renderTable(docs) {
 
     statTotal.textContent = docs.length;
     statPending.textContent = pendingCount;
+    statImpactFiles.textContent = `${totalFiles} files (${formatSize(totalSize)})`;
+}
+
+function formatSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 // --- ACTIONS ---
@@ -333,6 +352,8 @@ async function loadSettings() {
             donationLinkInput.value = donationSettings.link || '';
             updateMessageInput.value = donationSettings.updateMessage || '';
             updateLinkInput.value = donationSettings.updateLink || '';
+            forceUpdateChk.checked = donationSettings.forceUpdate || false;
+            trialDurationInput.value = donationSettings.trialDurationDays || 15;
             
             if (donationSettings.qrUrl) {
                 currentQrImg.src = donationSettings.qrUrl;
@@ -396,6 +417,8 @@ saveSettingsBtn.addEventListener('click', async () => {
             link: newLink,
             updateMessage: newUpdateMsg,
             updateLink: newUpdateLink,
+            forceUpdate: forceUpdateChk.checked,
+            trialDurationDays: parseInt(trialDurationInput.value) || 15,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
@@ -423,6 +446,7 @@ publishUpdateBtn.addEventListener('click', async () => {
         await db.collection('settings').doc('donation').set({
             updateMessage: newUpdateMsg,
             updateLink: newUpdateLink,
+            forceUpdate: forceUpdateChk.checked,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
