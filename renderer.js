@@ -176,6 +176,19 @@ async function checkRegistration() {
                 // Global Settings Sync
                 trialDays = data.trialDurationDays || 15;
                 if (data.qrUrl) donateQrImg.src = data.qrUrl;
+
+                // Restoring missing Donation Link logic
+                if (data.link) {
+                    donateLinkContainer.classList.remove('hidden');
+                    donateUrlLink.onclick = (e) => {
+                        e.preventDefault();
+                        let cleanLink = String(data.link).trim();
+                        if (!cleanLink.startsWith('http')) cleanLink = 'https://' + cleanLink;
+                        window.api.openUrl(cleanLink);
+                    };
+                } else {
+                    donateLinkContainer.classList.add('hidden');
+                }
                 
                 // Update Banner (Non-Force)
                 const updateBanner = document.getElementById('update-banner');
