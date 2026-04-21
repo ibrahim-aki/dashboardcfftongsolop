@@ -212,9 +212,9 @@ function renderTable(docs) {
             <td>${user.email || '-'}</td>
             <td style="font-family: monospace; font-size: 11px;">${id}</td>
             <td>
-                <div style="font-weight: bold; color: #008000;">${user.totalFilesCleaned || 0} files</div>
-                <div style="font-size: 10px; color: #666;">${formatSize(user.totalSizeSaved || 0)}</div>
-                ${user.proofUrl ? `<a href="#" class="action-link" style="font-size: 9px;" onclick="viewProof('${user.proofUrl}')">Lihat Bukti</a>` : ''}
+                <span style="font-weight: bold; color: #ff0000;">${user.totalFilesCleaned || 0}</span> / 
+                <span style="color: #666; font-size: 11px;">${formatSize(user.totalSizeSaved || 0)}</span>
+                ${user.proofUrl ? `<div style="margin-top: 4px;"><a href="#" class="action-link" style="font-size: 9px;" onclick="viewProof('${user.proofUrl}')">Lihat Bukti</a></div>` : ''}
             </td>
             <td>
                 <input type="number" value="${user.trialDays !== undefined ? user.trialDays : 14}" 
