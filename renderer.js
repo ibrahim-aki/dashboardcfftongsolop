@@ -249,20 +249,31 @@ async function checkRegistration() {
     // C. Apply Profile
     if (profile) {
         userProfile = profile;
-        isPremium = userProfile.isPremium === true;
-        
-        const statusText = isPremium ? 'DONATUR' : 'FREE';
-        portableBadge.textContent = `${userProfile.email} | ${statusText} ${fromCache ? '(OFFLINE)' : ''}`;
-        if (fromCache) portableBadge.classList.add('status-badge-offline');
-        
-        if (isPremium) {
+        // 5. TRIAL CALCULATION (Calendar-Based)
+        if (!isPremium) {
+            const trialInfo = calculateTrialStatus(profile);
+            userProfile.trialDays = trialInfo.remaining; // Update sisa hari di profile
+
+            if (trialInfo.remaining <= 0) {
+                portableBadge.textContent = `${userProfile.email} | TRIAL EXPIRED`;
+                portableBadge.classList.add('status-badge-offline');
+                // Optional: Sembunyikan tombol scan jika mau lebih ketat
+                // startScanBtn.disabled = true;
+            } else {
+                const statusText = fromCache ? 'TRIAL (OFFLINE)' : 'TRIAL';
+                portableBadge.textContent = `${userProfile.email} | ${statusText}: ${trialInfo.remaining} DAYS`;
+                if (fromCache) portableBadge.classList.add('status-badge-offline');
+            }
+            
+            // Sync sisa hari ke cloud jika online agar dashboard terupdate
+            if (!fromCache && profile.trialDays !== trialInfo.remaining) {
+                db.collection('users').doc(machineId).update({ trialDays: trialInfo.remaining });
+            }
+        } else {
+            portableBadge.textContent = `${userProfile.email} | DONATUR ${fromCache ? '(OFFLINE)' : ''}`;
+            if (fromCache) portableBadge.classList.add('status-badge-offline');
             smartSelectBtn.classList.remove('premium-locked-btn');
             smartSelectBtn.title = 'Saran seleksi otomatis';
-        }
-
-        // AUTO DECREMENT TRIAL (Jika Online)
-        if (!isPremium && !fromCache) {
-            handleTrialCountdown(profile);
         }
 
     } else {
@@ -274,19 +285,23 @@ async function checkRegistration() {
     syncUsageData();
 }
 
-async function handleTrialCountdown(profile) {
-    const lastCheck = profile.lastDecrementDate || "";
-    const today = new Date().toISOString().split('T')[0];
-
-    if (lastCheck !== today && profile.trialDays > 0) {
-        try {
-            await db.collection('users').doc(machineId).update({
-                trialDays: firebase.firestore.FieldValue.increment(-1),
-                lastDecrementDate: today
-            });
-            console.log("Trial decremented for today.");
-        } catch (e) { console.error("Decrement failed:", e); }
-    }
+function calculateTrialStatus(profile) {
+    if (!profile.registeredAt) return { remaining: trialDays };
+    
+    const regDate = profile.registeredAt.toDate ? profile.registeredAt.toDate() : new Date(profile.registeredAt);
+    const today = new Date();
+    
+    // Hitung selisih hari
+    const diffTime = Math.abs(today - regDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // totalDays berasal dari settings dashboard (default 15)
+    const remaining = Math.max(0, trialDays - (diffDays - 1));
+    
+    return {
+        remaining: remaining,
+        elapsed: diffDays
+    };
 }
 
 init();
