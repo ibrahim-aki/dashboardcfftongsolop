@@ -63,7 +63,7 @@ const donateUrlLink = document.getElementById('donate-url-link');
 const regTosChk = document.getElementById('reg-tos-chk');
 const tosModal = document.getElementById('tos-modal');
 
-let trialDays = 0; // Global trial days from settings
+let trialDays = 15; // Default 15 hari (akan di-override oleh Firebase settings jika tersedia)
 let isOffline = false;
 let cloudSettings = null; // Store latest settings for bilingual updates
 
@@ -528,6 +528,9 @@ submitRegBtn.addEventListener('click', async () => {
 
         regModal.classList.add('hidden');
         alert("Pendaftaran berhasil! Selamat menggunakan aplikasi Clone File Finder.");
+        
+        // Muat ulang profil agar trial langsung aktif tanpa restart
+        await checkRegistration();
     } catch (err) {
         console.error("Registration error:", err);
         regErrorMsg.textContent = "Gagal mendaftar. Coba lagi nanti.";
