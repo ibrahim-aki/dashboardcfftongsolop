@@ -132,7 +132,7 @@
                 <div style="margin-top: 15px; display: flex; align-items: flex-start; gap: 8px; text-align: left; background: #eee; padding: 8px; border: 1px inset #fff;">
                     <input type="checkbox" id="reg-tos-chk" style="margin-top: 2px; cursor: pointer;">
                     <label for="reg-tos-chk" style="font-size: 10px; line-height: 1.4; cursor: pointer; color: #000;">
-                        Saya menyetujui <a href="#" onclick="window.api.openUrl('https://tongsolop.com/tos')" style="color: blue; text-decoration: underline;">Syarat & Ketentuan</a> serta kebijakan privasi yang berlaku pada aplikasi ini.
+                        Saya menyetujui <a href="#" onclick="openTosModal()" style="color: blue; text-decoration: underline;">Syarat & Ketentuan</a> serta kebijakan privasi yang berlaku pada aplikasi ini.
                     </label>
                 </div>
                 <div style="margin-top: 12px; text-align: center;">
@@ -225,6 +225,27 @@
                     <button id="modal-cancel-btn" class="win98-btn">Cancel</button>
                     <button id="modal-confirm-btn" class="win98-btn">OK</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. Modal TOS (Internal) -->
+    <div id="tos-modal" class="modal-overlay hidden">
+        <div class="modal-window outset" style="max-width: 400px;">
+            <div class="panel-header">Syarat & Ketentuan Penggunaan</div>
+            <div class="modal-body-content" style="max-height: 300px; overflow-y: auto; font-size: 11px; line-height: 1.5; text-align: left; background: #fff; padding: 10px; border: 1px inset #fff;">
+                <p><b>1. Penggunaan Aplikasi</b><br>Aplikasi ini dirancang untuk membantu mencari dan menghapus file duplikat atau sampah pada komputer Anda.</p>
+                
+                <p><b>2. Batasan Tanggung Jawab</b><br>Pengguna bertanggung jawab penuh atas setiap tindakan penghapusan file. Pengembang tidak bertanggung jawab atas kehilangan data, kerusakan sistem, atau kerugian lainnya yang timbul akibat penggunaan aplikasi ini.</p>
+                
+                <p><b>3. Lisensi & Aktivasi</b><br>Satu akun/HWID hanya berlaku untuk satu perangkat. Dilarang keras melakukan modifikasi, pembongkaran kode (reverse engineering), atau pendistribusian ulang tanpa izin resmi.</p>
+                
+                <p><b>4. Data Pribadi</b><br>Kami mengumpulkan data berupa Nama, Email, dan Hardware ID semata-mata untuk keperluan aktivasi lisensi dan pembaruan aplikasi.</p>
+                
+                <p><b>5. Perubahan Ketentuan</b><br>Pengembang berhak mengubah syarat dan ketentuan ini sewaktu-waktu melalui pembaruan aplikasi.</p>
+            </div>
+            <div style="margin-top: 10px; text-align: center;">
+                <button onclick="closeTosModal()" class="win98-btn" style="padding: 5px 20px;">TUTUP</button>
             </div>
         </div>
     </div>

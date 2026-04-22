@@ -61,6 +61,7 @@ const donateQrImg = document.getElementById('donate-qr-img');
 const donateLinkContainer = document.getElementById('donate-link-container');
 const donateUrlLink = document.getElementById('donate-url-link');
 const regTosChk = document.getElementById('reg-tos-chk');
+const tosModal = document.getElementById('tos-modal');
 
 let trialDays = 0; // Global trial days from settings
 let isOffline = false;
@@ -304,6 +305,15 @@ function calculateTrialStatus(profile) {
         elapsed: diffDays
     };
 }
+
+// --- TOS MODAL ---
+window.openTosModal = () => {
+    tosModal.classList.remove('hidden');
+};
+
+window.closeTosModal = () => {
+    tosModal.classList.add('hidden');
+};
 
 init();
 
