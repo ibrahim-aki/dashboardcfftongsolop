@@ -53,6 +53,7 @@ const newQrInput = document.getElementById('new-qr-input');
 const deleteQrBtn = document.getElementById('delete-qr-btn');
 const donationLinkInput = document.getElementById('donation-link-input');
 const updateMessageInput = document.getElementById('update-message-input');
+const updateMessageEnInput = document.getElementById('update-message-en-input');
 const updateLinkInput = document.getElementById('update-link-input');
 const forceUpdateChk = document.getElementById('force-update-chk');
 const trialDurationInput = document.getElementById('trial-duration-input');
@@ -192,6 +193,9 @@ async function loadUsers() {
     }
 }
 
+// Global storage for user proof data (avoids putting JSON in HTML attributes)
+const userProofData = {};
+
 function renderTable(docs) {
     userTableBody.innerHTML = '';
     let pendingCount = 0;
@@ -202,6 +206,14 @@ function renderTable(docs) {
         const user = doc.data();
         const id = doc.id;
         
+        // Store proof data in JS memory
+        if (user.proofUrl) {
+            userProofData[id] = {
+                url: user.proofUrl,
+                history: user.proofHistory || []
+            };
+        }
+
         if (user.status === 'WAITING_APPROVAL') pendingCount++;
         totalFiles += (user.totalFilesCleaned || 0);
         totalSize += (user.totalSizeSaved || 0);
@@ -211,10 +223,21 @@ function renderTable(docs) {
             <td><strong>${user.name || 'No Name'}</strong></td>
             <td>${user.email || '-'}</td>
             <td style="font-family: monospace; font-size: 11px;">${id}</td>
+            <td style="text-align: center;">
+                <span class="stat-pill" style="background: #e3f2fd; color: #0d47a1; font-weight: bold;">
+                    ${user.totalDonations || 0}x
+                </span>
+            </td>
+            <td>
+                ${user.proofUrl ? 
+                    `<a href="#" class="action-link" style="color: blue; text-decoration: underline; font-size: 11px;" 
+                        onclick="viewProof('${id}')">Lihat Bukti</a>` : 
+                    '<span style="color: #ccc; font-size: 10px;">No Proof</span>'}
+            </td>
+
             <td>
                 <span style="font-weight: bold; color: #ff0000;">${user.totalFilesCleaned || 0}</span> / 
                 <span style="color: #666; font-size: 11px;">${formatSize(user.totalSizeSaved || 0)}</span>
-                ${user.proofUrl ? `<div style="margin-top: 4px;"><a href="#" class="action-link" style="font-size: 9px;" onclick="viewProof('${user.proofUrl}')">Lihat Bukti</a></div>` : ''}
             </td>
             <td>
                 <input type="number" value="${user.trialDays !== undefined ? user.trialDays : 14}" 
@@ -264,8 +287,33 @@ window.updateUserTrial = async (machineId, days) => {
         alert("Gagal update trial: " + err.message);
     }
 };
-window.viewProof = (url) => {
-    modalProofImg.src = url;
+window.viewProof = (userId) => {
+    const data = userProofData[userId];
+    if (!data) return;
+
+    const container = document.querySelector('.modal-body');
+    const history = data.history;
+
+    if (!history || history.length === 0) {
+        // Hanya 1 bukti, tampilkan langsung
+        container.innerHTML = `<img src="${data.url}" style="width: 100%; border-radius: 8px;">`;
+    } else {
+        // Tampilkan galeri riwayat
+        const sorted = [...history].reverse();
+        container.innerHTML = `
+            <div style="max-height: 500px; overflow-y: auto; padding-right: 10px;">
+                <h4 style="margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Riwayat Bukti Donasi (${sorted.length})</h4>
+                ${sorted.map((h, i) => `
+                    <div style="margin-bottom: 20px; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #eee;">
+                        <p style="font-size: 11px; color: #666; margin-bottom: 8px;">
+                            <strong>Bukti ke-${sorted.length - i}</strong> &bull; ${new Date(h.sentAt || Date.now()).toLocaleString()}
+                        </p>
+                        <img src="${h.url}" style="width: 100%; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
     proofModal.classList.remove('hidden');
 };
 
@@ -317,16 +365,23 @@ window.deleteUser = async (machineId) => {
     const userDoc = await db.collection('users').doc(machineId).get();
     const userData = userDoc.data();
 
-    if (!confirm("HAPUS USER? User akan dihapus permanen dari database dan foto di Cloudinary juga akan dihapus.")) return;
+    if (!confirm("HAPUS USER? Seluruh riwayat foto di Cloudinary juga akan dihapus permanen.")) return;
 
     try {
-        // Hapus file bukti di Cloudinary
-        if (userData.proofPublicId) {
+        // 1. Hapus seluruh riwayat foto di Cloudinary
+        if (userData.proofHistory && Array.isArray(userData.proofHistory)) {
+            for (const item of userData.proofHistory) {
+                if (item.publicId) {
+                    await deleteFromCloudinary(item.publicId);
+                }
+            }
+        } else if (userData.proofPublicId) {
+            // Fallback untuk user lama
             await deleteFromCloudinary(userData.proofPublicId);
         }
 
         await db.collection('users').doc(machineId).delete();
-        alert("User berhasil dihapus!");
+        alert("User dan seluruh riwayat foto berhasil dihapus!");
     } catch (err) {
         alert("Gagal menghapus user: " + err.message);
     }
@@ -351,6 +406,7 @@ async function loadSettings() {
             donationSettings = doc.data();
             donationLinkInput.value = donationSettings.link || '';
             updateMessageInput.value = donationSettings.updateMessage || '';
+            if (updateMessageEnInput) updateMessageEnInput.value = donationSettings.updateMessageEn || '';
             updateLinkInput.value = donationSettings.updateLink || '';
             forceUpdateChk.checked = donationSettings.forceUpdate || false;
             trialDurationInput.value = donationSettings.trialDurationDays || 15;
@@ -411,11 +467,14 @@ saveSettingsBtn.addEventListener('click', async () => {
             finalQrPublicId = data.public_id;
         }
 
+        const newUpdateMsgEn = updateMessageEnInput ? updateMessageEnInput.value : '';
+
         await db.collection('settings').doc('donation').set({
             qrUrl: finalQrUrl,
             qrPublicId: finalQrPublicId,
             link: newLink,
             updateMessage: newUpdateMsg,
+            updateMessageEn: newUpdateMsgEn,
             updateLink: newUpdateLink,
             forceUpdate: forceUpdateChk.checked,
             trialDurationDays: parseInt(trialDurationInput.value) || 15,
@@ -437,6 +496,7 @@ saveSettingsBtn.addEventListener('click', async () => {
 const publishUpdateBtn = document.getElementById('publish-update-btn');
 publishUpdateBtn.addEventListener('click', async () => {
     const newUpdateMsg = updateMessageInput.value;
+    const newUpdateMsgEn = updateMessageEnInput ? updateMessageEnInput.value : '';
     const newUpdateLink = updateLinkInput.value;
 
     try {
@@ -445,6 +505,7 @@ publishUpdateBtn.addEventListener('click', async () => {
 
         await db.collection('settings').doc('donation').set({
             updateMessage: newUpdateMsg,
+            updateMessageEn: newUpdateMsgEn,
             updateLink: newUpdateLink,
             forceUpdate: forceUpdateChk.checked,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -478,3 +539,27 @@ deleteQrBtn.addEventListener('click', async () => {
         alert("Gagal menghapus: " + err.message);
     }
 });
+
+// --- AUTO TRANSLATE LOGIC ---
+if (updateMessageInput && updateMessageEnInput) {
+    updateMessageInput.addEventListener('blur', async () => {
+        const text = updateMessageInput.value.trim();
+        // Hanya terjemahkan jika kolom Inggris kosong
+        if (!text || (updateMessageEnInput.value.trim() !== "" && updateMessageEnInput.value.trim() !== "...")) return;
+
+        try {
+            updateMessageEnInput.placeholder = "Translating text to English...";
+            const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=id&tl=en&dt=t&q=${encodeURIComponent(text)}`);
+            const result = await response.json();
+            
+            if (result && result[0]) {
+                const translated = result[0].map(x => x[0]).join("");
+                updateMessageEnInput.value = translated;
+            }
+        } catch (error) {
+            console.error("Auto-translate failed:", error);
+        } finally {
+            updateMessageEnInput.placeholder = "Example: Version 1.1 is out...";
+        }
+    });
+}

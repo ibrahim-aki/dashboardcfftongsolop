@@ -60,13 +60,43 @@ function createWindow() {
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
-            contextIsolation: true
+            contextIsolation: true,
+            devTools: !app.isPackaged // DevTools HANYA aktif di mode development
         },
         autoHideMenuBar: true,
         backgroundColor: '#0f172a'
     });
 
     mainWindow.loadFile('index.html');
+
+    // --- SECURITY: Blokir DevTools di mode produksi ---
+    if (app.isPackaged) {
+        // 1. Cegah DevTools dibuka via kode
+        mainWindow.webContents.on('devtools-opened', () => {
+            mainWindow.webContents.closeDevTools();
+        });
+
+        // 2. Blokir shortcut keyboard berbahaya
+        const { Menu } = require('electron');
+        Menu.setApplicationMenu(null); // Hapus menu bar
+
+        mainWindow.webContents.on('before-input-event', (event, input) => {
+            // Blokir F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+            const isDevToolShortcut = (
+                input.key === 'F12' ||
+                (input.control && input.shift && ['i', 'I', 'j', 'J', 'c', 'C'].includes(input.key))
+            );
+            if (isDevToolShortcut) event.preventDefault();
+        });
+
+        // 3. Blokir klik kanan (Inspect Element)
+        mainWindow.webContents.on('context-menu', (event) => {
+            event.preventDefault();
+        });
+    } else {
+        // Mode Development: DevTools tetap bebas
+        mainWindow.webContents.openDevTools();
+    }
 
     mainWindow.on('closed', () => {
         if (scanWorker) scanWorker.terminate();

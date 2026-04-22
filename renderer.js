@@ -65,6 +65,7 @@ const tosModal = document.getElementById('tos-modal');
 
 let trialDays = 0; // Global trial days from settings
 let isOffline = false;
+let cloudSettings = null; // Store latest settings for bilingual updates
 
 // --- I18N SYSTEM ---
 const translations = {
@@ -97,7 +98,10 @@ const translations = {
         register_btn: "DAFTAR SEKARANG",
         donate_title: "Donasi & Dukungan",
         donate_tip: "Dukung pengembangan aplikasi ini dengan donasi seikhlasnya.",
-        start_tip: "Klik 'Mulai Pindai' untuk memulai."
+        start_tip: "Klik 'Mulai Pindai' untuk memulai.",
+        status_free: "FREE",
+        status_donatur: "DONATUR",
+        status_expired: "FREE (EXPIRED)"
     },
     en: {
         update_banner: "New version available!",
@@ -128,7 +132,10 @@ const translations = {
         register_btn: "REGISTER NOW",
         donate_title: "Donate & Support",
         donate_tip: "Support the development of this app with a donation.",
-        start_tip: "Click 'Start Scan' to begin."
+        start_tip: "Click 'Start Scan' to begin.",
+        status_free: "FREE",
+        status_donatur: "DONOR",
+        status_expired: "FREE (EXPIRED)"
     }
 };
 
@@ -158,6 +165,37 @@ function applyTranslations() {
     const btnEn = document.getElementById('btn-lang-en');
     if (btnId) btnId.classList.toggle('active', currentLang === 'id');
     if (btnEn) btnEn.classList.toggle('active', currentLang === 'en');
+
+    // Update dynamic cloud banner if exists
+    renderUpdateBanner();
+}
+
+function renderUpdateBanner() {
+    if (!cloudSettings) return;
+    const bannerTextEl = document.getElementById('update-banner-text');
+    const updateBanner = document.getElementById('update-banner');
+    const updateBtn = document.getElementById('update-download-btn');
+
+    // Priority: updateMessageEn for 'en', updateMessageId for 'id', fallback to updateMessage
+    let msg = '';
+    if (currentLang === 'en') {
+        msg = cloudSettings.updateMessageEn || cloudSettings.updateMessage;
+    } else {
+        msg = cloudSettings.updateMessageId || cloudSettings.updateMessage;
+    }
+
+    if (msg && !cloudSettings.forceUpdate) {
+        updateBanner.classList.remove('hidden');
+        bannerTextEl.textContent = msg;
+        if (cloudSettings.updateLink) {
+            updateBtn.classList.remove('hidden');
+            updateBtn.onclick = () => window.api.openUrl(cloudSettings.updateLink);
+        } else {
+            updateBtn.classList.add('hidden');
+        }
+    } else {
+        updateBanner.classList.add('hidden');
+    }
 }
 
 const forceUpdateModal = document.getElementById('force-update-modal');
@@ -260,12 +298,12 @@ async function checkRegistration() {
         db.collection('settings').doc('donation').onSnapshot(doc => {
             if (doc.exists) {
                 const data = doc.data();
+                cloudSettings = data; // Save to global state
                 
                 // 1. FORCE UPDATE CHECK (LOCKED)
                 if (data.updateLink && data.forceUpdate === true) {
                     forceUpdateModal.classList.remove('hidden');
                     forceDownloadBtn.onclick = () => window.api.openUrl(data.updateLink);
-                    // Kita tidak mereturn di sini agar listener tetap jalan jika nanti dimatikan admin
                 } else {
                     forceUpdateModal.classList.add('hidden');
                 }
@@ -287,21 +325,8 @@ async function checkRegistration() {
                     donateLinkContainer.classList.add('hidden');
                 }
                 
-                // 4. Update Banner (Non-Force)
-                const updateBanner = document.getElementById('update-banner');
-                const updateBtn = document.getElementById('update-download-btn');
-                if (data.updateMessage && !data.forceUpdate) {
-                    updateBanner.classList.remove('hidden');
-                    document.getElementById('update-banner-text').textContent = data.updateMessage;
-                    if (data.updateLink) {
-                        updateBtn.classList.remove('hidden');
-                        updateBtn.onclick = () => window.api.openUrl(data.updateLink);
-                    } else {
-                        updateBtn.classList.add('hidden');
-                    }
-                } else {
-                    updateBanner.classList.add('hidden');
-                }
+                // 4. Update Banner (Non-Force) - Use the new bilingual function
+                renderUpdateBanner();
             }
         });
     }
@@ -355,16 +380,17 @@ async function checkRegistration() {
         // 5. TRIAL CALCULATION (Calendar-Based)
         if (!isPremium) {
             const trialInfo = calculateTrialStatus(profile);
-            userProfile.trialDays = trialInfo.remaining; // Update sisa hari di profile
+            userProfile.trialDays = trialInfo.remaining;
+
+            const dict = translations[currentLang];
 
             if (trialInfo.remaining <= 0) {
-                portableBadge.textContent = `${userProfile.email} | TRIAL EXPIRED`;
+                portableBadge.textContent = `${userProfile.email} | ${dict.status_expired}`;
                 portableBadge.classList.add('status-badge-offline');
-                // Optional: Sembunyikan tombol scan jika mau lebih ketat
-                // startScanBtn.disabled = true;
             } else {
-                const statusText = fromCache ? 'TRIAL (OFFLINE)' : 'TRIAL';
-                portableBadge.textContent = `${userProfile.email} | ${statusText}: ${trialInfo.remaining} DAYS`;
+                const statusLabel = dict.status_free;
+                const statusText = fromCache ? `${statusLabel} (OFFLINE)` : statusLabel;
+                portableBadge.textContent = `${userProfile.email} | ${statusText}`;
                 if (fromCache) portableBadge.classList.add('status-badge-offline');
             }
             
@@ -373,7 +399,9 @@ async function checkRegistration() {
                 db.collection('users').doc(machineId).update({ trialDays: trialInfo.remaining });
             }
         } else {
-            portableBadge.textContent = `${userProfile.email} | DONATUR ${fromCache ? '(OFFLINE)' : ''}`;
+            const dict = translations[currentLang];
+            const donaturLabel = dict.status_donatur;
+            portableBadge.textContent = `${userProfile.email} | ${donaturLabel} ${fromCache ? '(OFFLINE)' : ''}`;
             if (fromCache) portableBadge.classList.add('status-badge-offline');
             smartSelectBtn.classList.remove('premium-locked-btn');
             smartSelectBtn.title = 'Saran seleksi otomatis';
@@ -595,13 +623,34 @@ submitProofBtn.addEventListener('click', async () => {
 
         const uploadData = await uploadRes.json();
 
-        // Update User Doc with Proof URL from Cloudinary
-        await db.collection('users').doc(machineId).update({
+        // STEP 1: Update critical fields first (status & proof URL) - must succeed
+        await db.collection('users').doc(machineId).set({
             status: 'WAITING_APPROVAL',
             proofUrl: uploadData.secure_url,
             proofPublicId: uploadData.public_id,
             proofSentAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }, { merge: true });
+
+        // STEP 2: Update donation history (manual read-write, set+merge for new fields)
+        try {
+            const userDoc = await db.collection('users').doc(machineId).get();
+            const existingData = userDoc.exists ? userDoc.data() : {};
+            const existingHistory = Array.isArray(existingData.proofHistory) ? existingData.proofHistory : [];
+            const existingTotal = typeof existingData.totalDonations === 'number' ? existingData.totalDonations : 0;
+
+            const newEntry = {
+                url: uploadData.secure_url,
+                publicId: uploadData.public_id,
+                sentAt: new Date().toISOString()
+            };
+
+            await db.collection('users').doc(machineId).set({
+                totalDonations: existingTotal + 1,
+                proofHistory: [...existingHistory, newEntry]
+            }, { merge: true });
+        } catch (historyErr) {
+            alert('Peringatan: Riwayat donasi gagal disimpan: ' + historyErr.message);
+        }
 
         alert("Terima kasih banyak atas dukungannya! Bukti donasi Anda telah kami terima. Admin akan melakukan aktivasi dalam waktu 1x24 jam. Mohon tunggu kabar baik dari kami.");
         donateModal.classList.add('hidden');
