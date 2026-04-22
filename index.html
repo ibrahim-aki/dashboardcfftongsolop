@@ -129,7 +129,13 @@
                     <input type="email" id="reg-email" class="input-win" style="width: 100%;" placeholder="budi@example.com">
                     <p style="font-size: 9px; color: red; margin-top: 2px;">* Gunakan email aktif untuk pemberitahuan/konfirmasi update.</p>
                 </div>
-                <div style="margin-top: 10px; text-align: center;">
+                <div style="margin-top: 15px; display: flex; align-items: flex-start; gap: 8px; text-align: left; background: #eee; padding: 8px; border: 1px inset #fff;">
+                    <input type="checkbox" id="reg-tos-chk" style="margin-top: 2px; cursor: pointer;">
+                    <label for="reg-tos-chk" style="font-size: 10px; line-height: 1.4; cursor: pointer; color: #000;">
+                        Saya menyetujui <a href="#" onclick="window.api.openUrl('https://tongsolop.com/tos')" style="color: blue; text-decoration: underline;">Syarat & Ketentuan</a> serta kebijakan privasi yang berlaku pada aplikasi ini.
+                    </label>
+                </div>
+                <div style="margin-top: 12px; text-align: center;">
                     <button id="submit-register-btn" class="win98-btn" style="width: 100%; justify-content: center; font-weight: bold;">DAFTAR SEKARANG</button>
                     <p id="reg-error" style="color: red; font-size: 10px; margin-top: 5px;" class="hidden"></p>
                 </div>

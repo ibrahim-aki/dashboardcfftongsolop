@@ -60,6 +60,7 @@ const proofImageInput = document.getElementById('proof-image');
 const donateQrImg = document.getElementById('donate-qr-img');
 const donateLinkContainer = document.getElementById('donate-link-container');
 const donateUrlLink = document.getElementById('donate-url-link');
+const regTosChk = document.getElementById('reg-tos-chk');
 
 let trialDays = 0; // Global trial days from settings
 let isOffline = false;
@@ -360,6 +361,12 @@ submitRegBtn.addEventListener('click', async () => {
 
     if (!name || !email) {
         regErrorMsg.textContent = "Nama dan Email wajib diisi!";
+        regErrorMsg.classList.remove('hidden');
+        return;
+    }
+
+    if (!regTosChk.checked) {
+        regErrorMsg.textContent = "Anda harus menyetujui Syarat & Ketentuan!";
         regErrorMsg.classList.remove('hidden');
         return;
     }
