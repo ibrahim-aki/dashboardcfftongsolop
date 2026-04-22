@@ -129,7 +129,7 @@
                     <input type="email" id="reg-email" class="input-win" style="width: 100%;" placeholder="budi@example.com">
                     <p style="font-size: 9px; color: red; margin-top: 2px;">* Gunakan email aktif untuk pemberitahuan/konfirmasi update.</p>
                 </div>
-                <div style="margin-top: 15px; display: flex; align-items: flex-start; gap: 8px; text-align: left; background: #eee; padding: 8px; border: 1px inset #fff;">
+                <div style="margin-top: 10px; display: flex; align-items: flex-start; gap: 8px; text-align: left;">
                     <input type="checkbox" id="reg-tos-chk" style="margin-top: 2px; cursor: pointer;">
                     <label for="reg-tos-chk" style="font-size: 10px; line-height: 1.4; cursor: pointer; color: #000;">
                         Saya menyetujui <a href="#" onclick="openTosModal()" style="color: blue; text-decoration: underline;">Syarat & Ketentuan</a> serta kebijakan privasi yang berlaku pada aplikasi ini.
@@ -234,15 +234,17 @@
         <div class="modal-window outset" style="max-width: 400px;">
             <div class="panel-header">Syarat & Ketentuan Penggunaan</div>
             <div class="modal-body-content" style="max-height: 300px; overflow-y: auto; font-size: 11px; line-height: 1.5; text-align: left; background: #fff; padding: 10px; border: 1px inset #fff;">
-                <p><b>1. Penggunaan Aplikasi</b><br>Aplikasi ini dirancang untuk membantu mencari dan menghapus file duplikat atau sampah pada komputer Anda.</p>
+                <p><b>1. Status Proyek & Infrastruktur</b><br>Aplikasi ini dikembangkan dalam kerangka proyek pembelajaran dan riset teknologi. Seluruh infrastruktur pendukung, termasuk namun tidak terbatas pada basis data (database), menggunakan layanan pihak ketiga dengan skema lisensi gratis. Oleh karena itu, Pengembang tidak memberikan jaminan atas ketersediaan layanan secara berkelanjutan. Aplikasi dapat mengalami penghentian fungsi, gangguan akses, atau kegagalan operasional sewaktu-waktu tanpa pemberitahuan sebelumnya.</p>
                 
-                <p><b>2. Batasan Tanggung Jawab</b><br>Pengguna bertanggung jawab penuh atas setiap tindakan penghapusan file. Pengembang tidak bertanggung jawab atas kehilangan data, kerusakan sistem, atau kerugian lainnya yang timbul akibat penggunaan aplikasi ini.</p>
+                <p><b>2. Batasan Tanggung Jawab</b><br>Pengguna memahami dan menyetujui bahwa penggunaan aplikasi ini dilakukan atas risiko pribadi. Pengembang tidak bertanggung jawab atas kehilangan data, kerusakan sistem, atau kerugian lainnya yang timbul akibat tindakan penghapusan file, termasuk yang disebabkan oleh kelalaian pengguna maupun kurangnya pemahaman dan pengetahuan pengguna dalam mengoperasikan aplikasi ini. Pengguna sangat disarankan untuk melakukan pencadangan (backup) data sebelum pembersihan.</p>
                 
-                <p><b>3. Lisensi & Aktivasi</b><br>Satu akun/HWID hanya berlaku untuk satu perangkat. Dilarang keras melakukan modifikasi, pembongkaran kode (reverse engineering), atau pendistribusian ulang tanpa izin resmi.</p>
+                <p><b>3. Lisensi & Aktivasi (HWID)</b><br>Satu pendaftaran lisensi terikat secara permanen pada satu Hardware ID (HWID) perangkat. Pengguna dilarang keras melakukan manipulasi HWID, pembongkaran kode (reverse engineering), atau pendistribusian ulang aplikasi tanpa izin resmi dari Pengembang.</p>
                 
-                <p><b>4. Data Pribadi</b><br>Kami mengumpulkan data berupa Nama, Email, dan Hardware ID semata-mata untuk keperluan aktivasi lisensi dan pembaruan aplikasi.</p>
+                <p><b>4. Kebijakan Donasi</b><br>Donasi bersifat sukarela sebagai bentuk dukungan terhadap pengembangan proyek pembelajaran ini. Seluruh donasi yang telah diproses tidak dapat ditarik kembali (non-refundable) dengan alasan apa pun, termasuk jika terjadi gangguan pada layanan pihak ketiga.</p>
                 
-                <p><b>5. Perubahan Ketentuan</b><br>Pengembang berhak mengubah syarat dan ketentuan ini sewaktu-waktu melalui pembaruan aplikasi.</p>
+                <p><b>5. Data & Privasi</b><br>Kami mengumpulkan informasi terbatas berupa Nama, Email, dan identitas perangkat (HWID) semata-mata untuk keperluan manajemen lisensi, keamanan akses, dan pemberitahuan pembaruan aplikasi.</p>
+                
+                <p><b>6. Perubahan Ketentuan</b><br>Pengembang berhak untuk memperbarui atau mengubah Syarat & Ketentuan ini sewaktu-waktu guna menyesuaikan dengan perkembangan teknis maupun kebijakan layanan pihak ketiga.</p>
             </div>
             <div style="margin-top: 10px; text-align: center;">
                 <button onclick="closeTosModal()" class="win98-btn" style="padding: 5px 20px;">TUTUP</button>
