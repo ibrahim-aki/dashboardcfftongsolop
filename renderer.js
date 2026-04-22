@@ -350,6 +350,8 @@ async function checkRegistration() {
     // C. Apply Profile
     if (profile) {
         userProfile = profile;
+        isPremium = profile.isPremium || false;
+        
         // 5. TRIAL CALCULATION (Calendar-Based)
         if (!isPremium) {
             const trialInfo = calculateTrialStatus(profile);
