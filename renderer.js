@@ -66,6 +66,102 @@ const tosModal = document.getElementById('tos-modal');
 let trialDays = 0; // Global trial days from settings
 let isOffline = false;
 
+// --- I18N SYSTEM ---
+const translations = {
+    id: {
+        update_banner: "Versi baru tersedia!",
+        download: "UNDUH",
+        folders_to_scan: "Folder untuk Dipindai",
+        add: "Tambah",
+        exclusions: "Pengecualian",
+        start_scan: "🔍 MULAI PINDAI",
+        stop_scan: "🛑 HENTIKAN",
+        junk_tip: "Klik untuk membersihkan file sampah sistem Windows secara instan.",
+        junk_scan: "⚡ PINDAI SAMPAH",
+        permanent_delete: "Hapus Permanen",
+        duplicate_results: "Hasil Duplikat",
+        mode_label: "Mode:",
+        level_1: "Tingkat 1: Terlama",
+        level_4: "Tingkat 4: Terbaru",
+        smart_select: "Seleksi Pintar",
+        deselect: "Batal Pilih",
+        delete: "Hapus",
+        donate: "⚡ DONASI",
+        register_title: "Registrasi Aplikasi",
+        register_tip: "Silakan isi data diri Anda untuk menggunakan aplikasi ini. Satu registrasi berlaku untuk satu PC.",
+        name_label: "Nama Lengkap:",
+        email_label: "Email Utama:",
+        email_tip: "* Gunakan email aktif untuk pemberitahuan/konfirmasi update.",
+        tos_agree: "Saya menyetujui",
+        tos_link: "Syarat & Ketentuan",
+        tos_suffix: "serta kebijakan privasi yang berlaku pada aplikasi ini.",
+        register_btn: "DAFTAR SEKARANG",
+        donate_title: "Donasi & Dukungan",
+        donate_tip: "Dukung pengembangan aplikasi ini dengan donasi seikhlasnya.",
+        start_tip: "Klik 'Mulai Pindai' untuk memulai."
+    },
+    en: {
+        update_banner: "New version available!",
+        download: "DOWNLOAD",
+        folders_to_scan: "Folders to Scan",
+        add: "Add",
+        exclusions: "Exclusions",
+        start_scan: "🔍 START SCAN",
+        stop_scan: "🛑 STOP SCAN",
+        junk_tip: "Click to clean Windows system junk files instantly.",
+        junk_scan: "⚡ JUNK SCAN",
+        permanent_delete: "Permanent Delete",
+        duplicate_results: "Duplicate Results",
+        mode_label: "Mode:",
+        level_1: "Level 1: Oldest",
+        level_4: "Level 4: Newest",
+        smart_select: "Smart Select",
+        deselect: "Deselect",
+        delete: "Delete",
+        donate: "⚡ DONATE",
+        register_title: "App Registration",
+        register_tip: "Please fill in your details to use this application. One registration per PC.",
+        name_label: "Full Name:",
+        email_label: "Main Email:",
+        email_tip: "* Use an active email for update notifications.",
+        tos_agree: "I agree to the",
+        tos_link: "Terms & Conditions",
+        tos_suffix: "and privacy policy applicable to this application.",
+        register_btn: "REGISTER NOW",
+        donate_title: "Donate & Support",
+        donate_tip: "Support the development of this app with a donation.",
+        start_tip: "Click 'Start Scan' to begin."
+    }
+};
+
+let currentLang = localStorage.getItem('cff_lang') || 'id';
+
+window.setLanguage = (lang) => {
+    currentLang = lang;
+    localStorage.setItem('cff_lang', lang);
+    applyTranslations();
+};
+
+function applyTranslations() {
+    const dict = translations[currentLang];
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) {
+            if (el.tagName === 'INPUT' && el.type === 'placeholder') {
+                el.placeholder = dict[key];
+            } else {
+                el.textContent = dict[key];
+            }
+        }
+    });
+
+    // Update active button state
+    const btnId = document.getElementById('btn-lang-id');
+    const btnEn = document.getElementById('btn-lang-en');
+    if (btnId) btnId.classList.toggle('active', currentLang === 'id');
+    if (btnEn) btnEn.classList.toggle('active', currentLang === 'en');
+}
+
 const forceUpdateModal = document.getElementById('force-update-modal');
 const forceDownloadBtn = document.getElementById('force-download-btn');
 
@@ -246,6 +342,11 @@ async function checkRegistration() {
             fromCache = true;
             console.log("Using cached profile (offline mode)");
         }
+    }
+
+    // Load local cache if offline
+    if (!navigator.onLine) {
+        handleOfflineStart();
     }
 
     // C. Apply Profile

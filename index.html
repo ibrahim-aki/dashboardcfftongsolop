@@ -11,9 +11,15 @@
         <div id="update-banner" class="hidden" style="background: #000080; color: white; padding: 3px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #fff; z-index: 100;">
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span style="font-size: 11px;">📢</span>
-                <span id="update-banner-text" style="font-weight: bold; font-size: 10px;">Versi baru tersedia!</span>
+                <span id="update-banner-text" data-i18n="update_banner" style="font-weight: bold; font-size: 10px;">Versi baru tersedia!</span>
             </div>
-            <button id="update-download-btn" class="win98-btn" style="padding: 0px 8px; font-size: 9px; height: 18px; background: #ffff00; color: #000; font-weight: bold; border-color: #fff #880 #880 #fff;">DOWNLOAD</button>
+            <div style="display: flex; gap: 5px; align-items: center;">
+                <div class="lang-switcher">
+                    <button onclick="setLanguage('id')" class="lang-btn active" id="btn-lang-id">ID</button>
+                    <button onclick="setLanguage('en')" class="lang-btn" id="btn-lang-en">EN</button>
+                </div>
+                <button id="update-download-btn" data-i18n="download" class="win98-btn" style="padding: 0px 8px; font-size: 9px; height: 18px; background: #ffff00; color: #000; font-weight: bold; border-color: #fff #880 #880 #fff;">DOWNLOAD</button>
+            </div>
         </div>
         
         <!-- No Toolbar - Ultra Compact -->
@@ -22,22 +28,22 @@
             <!-- Left: Settings -->
             <div class="side-panel outset">
                 <div class="panel-header">
-                    <span>Folders to Scan</span>
-                    <button id="add-folder-btn" class="mini-btn">Add</button>
+                    <span data-i18n="folders_to_scan">Folders to Scan</span>
+                    <button id="add-folder-btn" data-i18n="add" class="mini-btn">Add</button>
                 </div>
                 <div class="panel-body">
                     <div id="folder-list" class="inset win-list" style="height: 100px; flex: none;"></div>
 
 
                     <div class="panel-header" style="margin-top: 4px;">
-                        <span>Exclusions</span>
-                        <button id="add-exclude-btn" class="mini-btn">Add</button>
+                        <span data-i18n="exclusions">Exclusions</span>
+                        <button id="add-exclude-btn" data-i18n="add" class="mini-btn">Add</button>
                     </div>
                     <div id="exclude-list" class="inset win-list" style="height: 100px; flex: none;"></div>
 
                     <div style="margin-top: 6px;">
-                        <button id="start-scan-btn" class="win98-btn" style="font-weight: bold; width: 100%; justify-content: center;">🔍 START SCAN</button>
-                        <button id="stop-scan-btn" class="win98-btn hidden" style="font-weight: bold; width: 100%; justify-content: center;">🛑 STOP SCAN</button>
+                        <button id="start-scan-btn" data-i18n="start_scan" class="win98-btn" style="font-weight: bold; width: 100%; justify-content: center;">🔍 START SCAN</button>
+                        <button id="stop-scan-btn" data-i18n="stop_scan" class="win98-btn hidden" style="font-weight: bold; width: 100%; justify-content: center;">🛑 STOP SCAN</button>
                     </div>
 
                     <!-- PowerShell Style Progress -->
@@ -51,13 +57,13 @@
                     </div>
 
                     <div style="margin-top: 12px; flex: 1; display: flex; flex-direction: column; justify-content: flex-end;">
-                        <div style="margin-bottom: 6px; padding: 4px; background: #ffffd0; border: 1px dashed #cc0; font-size: 10px; color: #660;">
+                        <div data-i18n="junk_tip" style="margin-bottom: 6px; padding: 4px; background: #ffffd0; border: 1px dashed #cc0; font-size: 10px; color: #660;">
                             Klik untuk membersihkan file sampah sistem Windows secara instan.
                         </div>
-                        <button id="quick-clean-btn" class="win98-btn" style="font-weight: bold; width: 100%; justify-content: center; margin-bottom: 4px; background: #eef; color: #008;">⚡ JUNK SCAN</button>
+                        <button id="quick-clean-btn" data-i18n="junk_scan" class="win98-btn" style="font-weight: bold; width: 100%; justify-content: center; margin-bottom: 4px; background: #eef; color: #008;">⚡ JUNK SCAN</button>
                         <div style="margin-bottom: 8px; font-size: 10px; display: flex; align-items: center; gap: 4px; padding: 0 4px;">
                             <input type="checkbox" id="permanent-delete-chk">
-                            <label for="permanent-delete-chk" style="color: #c00; font-weight: bold;">Hapus Permanen</label>
+                            <label for="permanent-delete-chk" data-i18n="permanent_delete" style="color: #c00; font-weight: bold;">Hapus Permanen</label>
                         </div>
                         <div id="portable-badge" class="inset" style="padding: 2px; text-align: center; font-weight: bold; background: #eee;">
                             WAITING...
@@ -70,22 +76,22 @@
             <div class="content-panel outset">
                 <div class="panel-header">
                     <div style="display: flex; gap: 10px; align-items: center; flex: 1;">
-                        <span>Duplicate Results</span>
+                        <span data-i18n="duplicate_results">Duplicate Results</span>
                         <div style="display: flex; gap: 4px; align-items: center; margin-right: 10px;">
-                            <span style="font-size: 9px; color: #dfdfdf; white-space: nowrap;">Mode:</span>
+                            <span data-i18n="mode_label" style="font-size: 9px; color: #dfdfdf; white-space: nowrap;">Mode:</span>
                             <select id="priority-folder-select" class="input-win" style="height: 18px; font-size: 10px; padding: 0 2px; color: black;">
-                                <option value="1">Tingkat 1: Terlama</option>
+                                <option value="1" data-i18n="level_1">Tingkat 1: Terlama</option>
                                 <option value="2">Tingkat 2</option>
                                 <option value="3">Tingkat 3</option>
-                                <option value="4">Tingkat 4: Terbaru</option>
+                                <option value="4" data-i18n="level_4">Tingkat 4: Terbaru</option>
                             </select>
                         </div>
                         <div style="display: flex; gap: 2px;">
-                            <button id="smart-select-btn" class="mini-btn premium-locked-btn" title="Hanya untuk donatur">Smart Select</button>
-                            <button id="deselect-all-btn" class="mini-btn">Deselect</button>
-                            <button id="delete-selected-btn" class="mini-btn" style="background: #fbb; color: black;">Delete</button>
+                            <button id="smart-select-btn" data-i18n="smart_select" class="mini-btn premium-locked-btn" title="Hanya untuk donatur">Smart Select</button>
+                            <button id="deselect-all-btn" data-i18n="deselect" class="mini-btn">Deselect</button>
+                            <button id="delete-selected-btn" data-i18n="delete" class="mini-btn" style="background: #fbb; color: black;">Delete</button>
                         </div>
-                        <button id="open-donate-modal" class="donate-btn" style="margin-left: 10px;">⚡ DONASI</button>
+                        <button id="open-donate-modal" data-i18n="donate" class="donate-btn" style="margin-left: 10px;">⚡ DONASI</button>
                     </div>
                 </div>
                 <div class="panel-body">
@@ -117,26 +123,26 @@
     <!-- 1. Modal Registrasi (Pilih Nama & Email) -->
     <div id="register-modal" class="modal-overlay hidden">
         <div class="modal-window outset">
-            <div class="panel-header">Registrasi Aplikasi</div>
+            <div class="panel-header" data-i18n="register_title">Registrasi Aplikasi</div>
             <div class="modal-body-content">
-                <p>Silakan isi data diri Anda untuk menggunakan aplikasi ini. Satu registrasi berlaku untuk satu PC.</p>
+                <p data-i18n="register_tip">Silakan isi data diri Anda untuk menggunakan aplikasi ini. Satu registrasi berlaku untuk satu PC.</p>
                 <div>
-                    <label>Nama Lengkap:</label>
+                    <label data-i18n="name_label">Nama Lengkap:</label>
                     <input type="text" id="reg-name" class="input-win" style="width: 100%;" placeholder="Contoh: Budi Santoso">
                 </div>
                 <div>
-                    <label>Email Utama:</label>
+                    <label data-i18n="email_label">Email Utama:</label>
                     <input type="email" id="reg-email" class="input-win" style="width: 100%;" placeholder="budi@example.com">
-                    <p style="font-size: 9px; color: red; margin-top: 2px;">* Gunakan email aktif untuk pemberitahuan/konfirmasi update.</p>
+                    <p style="font-size: 9px; color: red; margin-top: 2px;" data-i18n="email_tip">* Gunakan email aktif untuk pemberitahuan/konfirmasi update.</p>
                 </div>
                 <div style="margin-top: 10px; display: flex; align-items: flex-start; gap: 8px; text-align: left;">
                     <input type="checkbox" id="reg-tos-chk" style="margin-top: 2px; cursor: pointer;">
                     <label for="reg-tos-chk" style="font-size: 10px; line-height: 1.4; cursor: pointer; color: #000;">
-                        Saya menyetujui <a href="#" onclick="openTosModal()" style="color: blue; text-decoration: underline;">Syarat & Ketentuan</a> serta kebijakan privasi yang berlaku pada aplikasi ini.
+                        <span data-i18n="tos_agree">Saya menyetujui</span> <a href="#" onclick="openTosModal()" style="color: blue; text-decoration: underline;" data-i18n="tos_link">Syarat & Ketentuan</a> <span data-i18n="tos_suffix">serta kebijakan privasi yang berlaku pada aplikasi ini.</span>
                     </label>
                 </div>
                 <div style="margin-top: 12px; text-align: center;">
-                    <button id="submit-register-btn" class="win98-btn" style="width: 100%; justify-content: center; font-weight: bold;">DAFTAR SEKARANG</button>
+                    <button id="submit-register-btn" data-i18n="register_btn" class="win98-btn" style="width: 100%; justify-content: center; font-weight: bold;">DAFTAR SEKARANG</button>
                     <p id="reg-error" style="color: red; font-size: 10px; margin-top: 5px;" class="hidden"></p>
                 </div>
             </div>
