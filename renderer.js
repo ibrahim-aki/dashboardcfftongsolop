@@ -510,7 +510,7 @@ submitRegBtn.addEventListener('click', async () => {
         return;
     }
 
-    if (!db) return alert("Firebase belum terhubung. Periksa koneksi internet.");
+    if (!db) return tampilkanModalWin98("Firebase belum terhubung. Periksa koneksi internet.", "Connection Error");
 
     try {
         submitRegBtn.disabled = true;
@@ -527,7 +527,7 @@ submitRegBtn.addEventListener('click', async () => {
         });
 
         regModal.classList.add('hidden');
-        alert("Pendaftaran berhasil! Selamat menggunakan aplikasi Clone File Finder.");
+        tampilkanModalWin98("Pendaftaran berhasil! Selamat menggunakan aplikasi Clone File Finder.", "Registration Success");
         
         // Muat ulang profil agar trial langsung aktif tanpa restart
         await checkRegistration();
@@ -593,8 +593,8 @@ function compressImage(file, quality = 0.7) {
 
 submitProofBtn.addEventListener('click', async () => {
     const file = proofImageInput.files[0];
-    if (!file) return alert("Pilih file gambar bukti donasi terlebih dahulu.");
-    if (!db) return alert("Database tidak aktif.");
+    if (!file) return tampilkanModalWin98("Pilih file gambar bukti donasi terlebih dahulu.", "Attention");
+    if (!db) return tampilkanModalWin98("Database tidak aktif.", "Error");
 
     try {
         submitProofBtn.disabled = true;
@@ -655,11 +655,11 @@ submitProofBtn.addEventListener('click', async () => {
             alert('Peringatan: Riwayat donasi gagal disimpan: ' + historyErr.message);
         }
 
-        alert("Terima kasih banyak atas dukungannya! Bukti donasi Anda telah kami terima. Admin akan melakukan aktivasi dalam waktu 1x24 jam. Mohon tunggu kabar baik dari kami.");
+        tampilkanModalWin98("Terima kasih banyak atas dukungannya! Bukti donasi Anda telah kami terima. Admin akan melakukan aktivasi dalam waktu 1x24 jam. Mohon tunggu kabar baik dari kami.", "Donation Received");
         donateModal.classList.add('hidden');
     } catch (err) {
         console.error("Upload error:", err);
-        alert("Gagal mengupload bukti: " + err.message);
+        tampilkanModalWin98("Gagal mengupload bukti: " + err.message, "Upload Error");
     } finally {
         submitProofBtn.disabled = false;
         submitProofBtn.textContent = "KIRIM BUKTI DONASI";
@@ -668,8 +668,8 @@ submitProofBtn.addEventListener('click', async () => {
 
 // --- SCANNING ---
 
-startScanBtn.addEventListener('click', () => {
-    if (selectedFolders.length === 0) return alert('Select at least one folder');
+startScanBtn.addEventListener('click', async () => {
+    if (selectedFolders.length === 0) return tampilkanModalWin98('Select at least one folder', 'Input Required');
     
     isScanning = true;
     scanResults = [];
@@ -699,7 +699,7 @@ quickCleanBtn.addEventListener('click', async () => {
     if (!junkPaths || junkPaths.length === 0) {
         isScanning = false;
         updateUIForScanning(false);
-        return alert('No junk folders found on this system.');
+        return tampilkanModalWin98('No junk folders found on this system.', 'Information');
     }
 
     const folders = junkPaths.map(p => p.path);
@@ -796,7 +796,7 @@ function processGroupBuffer() {
 window.api.onScanError((error) => {
     isScanning = false;
     updateUIForScanning(false);
-    alert(`Error: ${error}`);
+    tampilkanModalWin98(`Error: ${error}`, 'Scan Error');
 });
 
 function updateUIForScanning(scanning) {
@@ -1003,11 +1003,15 @@ function updateSummary() {
     summarySizeEl.textContent = `${formatSize(totalSize)} total`;
 }
 
-deleteBtn.addEventListener('click', () => {
-    if (selectedFiles.size === 0) return alert('No files selected');
+deleteBtn.addEventListener('click', async () => {
+    if (selectedFiles.size === 0) return tampilkanModalWin98('No files selected', 'Attention');
     
-    modalBody.textContent = `Are you sure you want to move ${selectedFiles.size} files to the Recycle Bin?`;
-    modalOverlay.classList.remove('hidden');
+    const confirmMsg = `Are you sure you want to move ${selectedFiles.size} files to the Recycle Bin?`;
+    const confirmed = await konfirmasiModalWin98(confirmMsg, 'Confirm Delete');
+    
+    if (confirmed) {
+        executeDelete();
+    }
 });
 
 modalCancelBtn.addEventListener('click', () => {
@@ -1077,7 +1081,15 @@ async function executeDelete() {
         message += `\n\n⚠️ Failed to delete ${failCount} files (likely in use):\n` + errors.slice(0, 5).join('\n');
         if (errors.length > 5) message += '\n...and more.';
     }
-    alert(message);
+    // Tampilkan hasil akhir dengan warna (Gunakan variabel yang sudah dideklarasikan di atas)
+    let finalMessage = `<span style="color: green; font-weight: bold;">Successfully deleted <span style="color: red; font-size: 14px;">${successCount}</span> files.</span>\n` +
+                       `<span style="color: green; font-weight: bold;">Total space cleared: <span style="color: #0000ff; font-size: 14px;">${formatSize(successSize)}</span></span>`;
+    
+    if (failCount > 0) {
+        finalMessage += `\n\n<span style="color: #666;">⚠️ Failed to delete <span style="color: red;">${failCount}</span> files (likely in use):</span>\n` + errors.slice(0, 5).join('\n');
+    }
+
+    tampilkanModalWin98(finalMessage, "Delete Task Completed");
     
     // Refresh results (remove ONLY successfully deleted files)
     scanResults = scanResults.map(group => {
@@ -1108,4 +1120,67 @@ function formatSize(bytes) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// --- GLOBAL CUSTOM DIALOGS (WIN98 STYLE) ---
+function tampilkanModalWin98(message, title = 'System Message') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('win98-modal-container');
+        const titleEl = document.getElementById('win98-modal-title');
+        const msgEl = document.getElementById('win98-modal-message');
+        const okBtn = document.getElementById('win98-modal-ok');
+        const cancelBtn = document.getElementById('win98-modal-cancel');
+        const closeBtn = document.getElementById('win98-modal-close');
+
+        titleEl.textContent = title;
+        msgEl.innerHTML = message.replace(/\n/g, '<br>'); // Mendukung warna via HTML
+        okBtn.classList.remove('hidden');
+        cancelBtn.classList.add('hidden');
+        modal.classList.remove('hidden');
+
+        const cleanup = () => {
+            modal.classList.add('hidden');
+            okBtn.removeEventListener('click', onOk);
+            closeBtn.removeEventListener('click', onOk);
+        };
+
+        const onOk = () => {
+            cleanup();
+            resolve();
+        };
+
+        okBtn.addEventListener('click', onOk);
+        closeBtn.addEventListener('click', onOk);
+    });
+}
+
+function konfirmasiModalWin98(message, title = 'Confirm') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('win98-modal-container');
+        const titleEl = document.getElementById('win98-modal-title');
+        const msgEl = document.getElementById('win98-modal-message');
+        const okBtn = document.getElementById('win98-modal-ok');
+        const cancelBtn = document.getElementById('win98-modal-cancel');
+        const closeBtn = document.getElementById('win98-modal-close');
+
+        titleEl.textContent = title;
+        msgEl.innerHTML = message.replace(/\n/g, '<br>');
+        okBtn.classList.remove('hidden');
+        cancelBtn.classList.remove('hidden');
+        modal.classList.remove('hidden');
+
+        const cleanup = () => {
+            modal.classList.add('hidden');
+            okBtn.removeEventListener('click', onOk);
+            cancelBtn.removeEventListener('click', onCancel);
+            closeBtn.removeEventListener('click', onCancel);
+        };
+
+        const onOk = () => { cleanup(); resolve(true); };
+        const onCancel = () => { cleanup(); resolve(false); };
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        closeBtn.addEventListener('click', onCancel);
+    });
 }

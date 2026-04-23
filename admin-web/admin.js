@@ -540,15 +540,18 @@ deleteQrBtn.addEventListener('click', async () => {
     }
 });
 
-// --- AUTO TRANSLATE LOGIC ---
-if (updateMessageInput && updateMessageEnInput) {
-    updateMessageInput.addEventListener('blur', async () => {
+// --- AUTO TRANSLATE LOGIC (MANUAL BY BUTTON) ---
+const btnTranslateAuto = document.getElementById('btn-translate-auto');
+if (updateMessageInput && updateMessageEnInput && btnTranslateAuto) {
+    btnTranslateAuto.addEventListener('click', async () => {
         const text = updateMessageInput.value.trim();
-        // Hanya terjemahkan jika kolom Inggris kosong
-        if (!text || (updateMessageEnInput.value.trim() !== "" && updateMessageEnInput.value.trim() !== "...")) return;
+        if (!text) return alert("Masukkan teks Indonesia terlebih dahulu!");
 
         try {
-            updateMessageEnInput.placeholder = "Translating text to English...";
+            btnTranslateAuto.disabled = true;
+            btnTranslateAuto.textContent = "Translating...";
+            updateMessageEnInput.placeholder = "Sedang menerjemahkan...";
+            
             const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=id&tl=en&dt=t&q=${encodeURIComponent(text)}`);
             const result = await response.json();
             
@@ -558,7 +561,10 @@ if (updateMessageInput && updateMessageEnInput) {
             }
         } catch (error) {
             console.error("Auto-translate failed:", error);
+            alert("Gagal menerjemahkan secara otomatis. Periksa koneksi internet.");
         } finally {
+            btnTranslateAuto.disabled = false;
+            btnTranslateAuto.textContent = "⬇️ TERJEMAHKAN KE INGGRIS (AUTO)";
             updateMessageEnInput.placeholder = "Example: Version 1.1 is out...";
         }
     });

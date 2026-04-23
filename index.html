@@ -257,6 +257,23 @@
         </div>
     </div>
 
+    <!-- Win98 Style Modal Container -->
+    <div id="win98-modal-container" class="modal-overlay hidden" style="z-index: 1000000;">
+        <div class="modal-window outset" style="width: 320px;">
+            <div class="panel-header">
+                <span id="win98-modal-title">System Message</span>
+                <button id="win98-modal-close" class="mini-btn">X</button>
+            </div>
+            <div class="modal-body-content" style="padding: 15px 20px; background: var(--bg);">
+                <p id="win98-modal-message" style="font-size: 11px; line-height: 1.5; white-space: pre-line; min-height: 40px; padding: 10px 0;"></p>
+                <div style="margin-top: 15px; display: flex; justify-content: center; gap: 10px;">
+                    <button id="win98-modal-ok" class="win98-btn" style="min-width: 65px; justify-content: center;">OK</button>
+                    <button id="win98-modal-cancel" class="win98-btn hidden" style="min-width: 65px; justify-content: center;">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
