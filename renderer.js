@@ -1029,7 +1029,7 @@ async function executeDelete() {
     const totalFiles = pathsToDelete.length;
     
     let successCount = 0;
-    let successSize = 0; // Tambahkan tracker size
+    let successSize = 0;
     let failCount = 0;
     let errors = [];
     const successfullyDeleted = new Set();
