@@ -1,5 +1,6 @@
 {
-  "name": "clone-file-finder",
+  "name": "sapudigital",
+  "productName": "sapudigital",
   "version": "1.0.0",
   "description": "Ultra-performance duplicate file finder for PC",
   "main": "main.js",
@@ -14,7 +15,7 @@
     "cleaner",
     "electron"
   ],
-  "author": "Antigravity",
+  "author": "tongsolop",
   "license": "MIT",
   "devDependencies": {
     "electron": "^30.0.0",
@@ -22,7 +23,7 @@
     "javascript-obfuscator": "^5.4.1"
   },
   "build": {
-    "appId": "com.antigravity.clonefinder",
+    "appId": "com.tongsolop.sapudigital",
     "win": {
       "target": "portable"
     },
