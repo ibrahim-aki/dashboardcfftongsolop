@@ -1,7 +1,7 @@
 {
   "name": "sapudigital",
   "productName": "sapudigital",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Ultra-performance duplicate file finder for PC",
   "main": "main.js",
   "scripts": {
