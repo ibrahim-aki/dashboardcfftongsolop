@@ -377,15 +377,18 @@ async function checkRegistration() {
         userProfile = profile;
         isPremium = profile.isPremium || false;
         
-        // 5. TRIAL CALCULATION (Calendar-Based)
+        // 5. TRIAL CALCULATION (Dynamic Expiry System)
         if (!isPremium) {
             const trialInfo = calculateTrialStatus(profile);
-            userProfile.trialDays = trialInfo.remaining;
+            userProfile.trialDays = trialInfo.days;
+            userProfile.trialMinutes = trialInfo.minutes;
+            userProfile.totalMinutesRemaining = trialInfo.totalMinutesRemaining;
 
             const dict = translations[currentLang];
 
-            if (trialInfo.remaining <= 0) {
-                portableBadge.textContent = `${userProfile.email} | ${dict.status_expired}`;
+            // SILENT TRIAL: Tidak menampilkan label "EXPIRED" di badge
+            if (trialInfo.totalMinutesRemaining <= 0) {
+                portableBadge.textContent = `${userProfile.email} | ${dict.status_free}`;
                 portableBadge.classList.add('status-badge-offline');
             } else {
                 const statusLabel = dict.status_free;
@@ -394,9 +397,15 @@ async function checkRegistration() {
                 if (fromCache) portableBadge.classList.add('status-badge-offline');
             }
             
-            // Sync sisa hari ke cloud jika online agar dashboard terupdate
-            if (!fromCache && profile.trialDays !== trialInfo.remaining) {
-                db.collection('users').doc(machineId).update({ trialDays: trialInfo.remaining });
+            // AUTO-MIGRATE: Jika user belum punya trialUntil, hitung dan simpan sekali
+            if (!fromCache && !profile.trialUntil) {
+                const totalMinutes = (trialInfo.days * 1440) + trialInfo.minutes;
+                const expiryDate = new Date();
+                expiryDate.setMinutes(expiryDate.getMinutes() + totalMinutes);
+                
+                db.collection('users').doc(machineId).update({ 
+                    trialUntil: firebase.firestore.Timestamp.fromDate(expiryDate)
+                });
             }
         } else {
             const dict = translations[currentLang];
@@ -417,21 +426,39 @@ async function checkRegistration() {
 }
 
 function calculateTrialStatus(profile) {
-    if (!profile.registeredAt) return { remaining: trialDays };
+    // 1. Prioritaskan trialUntil (Dynamic Expiry)
+    if (profile.trialUntil) {
+        const until = profile.trialUntil.toDate ? profile.trialUntil.toDate() : new Date(profile.trialUntil);
+        const now = new Date();
+        const diffMs = until - now;
+        const totalMinutesRemaining = Math.max(0, Math.floor(diffMs / (1000 * 60)));
+        
+        return {
+            days: Math.floor(totalMinutesRemaining / 1440),
+            minutes: totalMinutesRemaining % 1440,
+            totalMinutesRemaining: totalMinutesRemaining
+        };
+    }
+
+    // 2. Fallback ke Logika Lama (Registration-based)
+    const baseDays = profile.trialDays !== undefined ? parseInt(profile.trialDays) : trialDays;
+    const baseMinutes = profile.trialMinutes !== undefined ? parseInt(profile.trialMinutes) : 0;
+    const totalAllottedMinutes = (baseDays * 1440) + baseMinutes;
+    
+    if (!profile.registeredAt) return { days: baseDays, minutes: baseMinutes, totalMinutesRemaining: totalAllottedMinutes };
     
     const regDate = profile.registeredAt.toDate ? profile.registeredAt.toDate() : new Date(profile.registeredAt);
-    const today = new Date();
+    const diffMs = new Date() - regDate;
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
     
-    // Hitung selisih hari
-    const diffTime = Math.abs(today - regDate);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    // totalDays berasal dari settings dashboard (default 15)
-    const remaining = Math.max(0, trialDays - (diffDays - 1));
+    const totalMinutesRemaining = Math.max(0, totalAllottedMinutes - diffMinutes);
+    const remainingDays = Math.floor(totalMinutesRemaining / 1440);
+    const remainingMinutes = totalMinutesRemaining % 1440;
     
     return {
-        remaining: remaining,
-        elapsed: diffDays
+        days: remainingDays,
+        minutes: remainingMinutes,
+        totalMinutesRemaining: totalMinutesRemaining
     };
 }
 
@@ -522,7 +549,8 @@ submitRegBtn.addEventListener('click', async () => {
             machineId,
             registeredAt: firebase.firestore.FieldValue.serverTimestamp(),
             isPremium: false,
-            trialDays: 15, // Langsung punya 15 hari saat daftar
+            trialDays: 15,    // Default 15 Hari
+            trialMinutes: 0,   // Default 0 Menit
             status: 'REGISTERED'
         });
 
@@ -924,10 +952,11 @@ smartSelectBtn.addEventListener('click', () => {
     let canUseSmartSelect = isPremium;
 
     if (!isPremium && userProfile) {
-        const userTrial = userProfile.trialDays !== undefined ? userProfile.trialDays : 15;
-        if (userTrial > 0) {
+        // Cek total menit sisa (Silent check)
+        const totalRemaining = userProfile.totalMinutesRemaining !== undefined ? userProfile.totalMinutesRemaining : 0;
+        if (totalRemaining > 0) {
             canUseSmartSelect = true;
-            console.log(`User Freemium aktif: sisa ${userTrial} hari.`);
+            console.log(`User Freemium aktif: sisa ${totalRemaining} menit.`);
         }
     }
 

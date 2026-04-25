@@ -38,7 +38,6 @@ const loginError = document.getElementById('login-error');
 const logoutBtn = document.getElementById('logout-btn');
 const userTableBody = document.getElementById('user-table-body');
 const proofModal = document.getElementById('proof-modal');
-const modalProofImg = document.getElementById('modal-proof-img');
 
 const statTotal = document.getElementById('stat-total');
 const statPending = document.getElementById('stat-pending');
@@ -60,8 +59,15 @@ const trialDurationInput = document.getElementById('trial-duration-input');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
 const statImpactFiles = document.getElementById('stat-impact-files');
 
+// --- TRIAL MODAL ELEMENTS ---
+const trialModal = document.getElementById('trial-modal');
+const trialModalUser = document.getElementById('trial-modal-user');
+const editTrialDays = document.getElementById('edit-trial-days');
+const editTrialMinutes = document.getElementById('edit-trial-minutes');
+const saveTrialBtn = document.getElementById('save-trial-btn');
 
-let donationSettings = { qrUrl: '', qrPublicId: '', link: '' };
+let currentEditingUserId = null;
+let donationSettings = { qrUrl: '', qrPublicId: '', link: '', trialDurationDays: 15 };
 
 // --- CLOUDINARY CONFIG ---
 const CLOUDINARY_API_KEY = import.meta.env.VITE_CLOUDINARY_API_KEY;
@@ -182,19 +188,68 @@ loginForm.addEventListener('submit', async (e) => {
 logoutBtn.addEventListener('click', () => auth.signOut());
 
 // --- DATA FETCHING ---
+let lastDocs = []; // Store last snapshot for auto-refresh
 async function loadUsers() {
     try {
         // Real-time listener
         db.collection('users').orderBy('registeredAt', 'desc').onSnapshot(snapshot => {
+            lastDocs = snapshot.docs;
             renderTable(snapshot.docs);
         });
+
+        // Auto-refresh timer for dynamic trial countdown (every 30 seconds)
+        setInterval(() => {
+            if (lastDocs.length > 0) {
+                console.log("Auto-refreshing trial countdowns...");
+                renderTable(lastDocs);
+            }
+        }, 30000); 
+
     } catch (err) {
         console.error("Error loading users:", err);
     }
 }
 
-// Global storage for user proof data (avoids putting JSON in HTML attributes)
+// Global storage for user proof data
 const userProofData = {};
+
+function getTrialInfo(user) {
+    if (user.isPremium) return { days: 0, minutes: 0, totalMinutesRemaining: 0, isExpired: false };
+    
+    // 1. Get base duration
+    const baseDays = user.trialDays !== undefined ? parseInt(user.trialDays) : (donationSettings.trialDurationDays || 15);
+    const baseMinutes = user.trialMinutes !== undefined ? parseInt(user.trialMinutes) : 0;
+    
+    // 2. Check if we have trialUntil (New Logic - Dynamic Expiry)
+    if (user.trialUntil) {
+        const until = user.trialUntil.toDate ? user.trialUntil.toDate() : new Date(user.trialUntil);
+        const now = new Date();
+        const diffMs = until - now;
+        const totalMinutesRemaining = Math.max(0, Math.floor(diffMs / (1000 * 60)));
+        return {
+            days: Math.floor(totalMinutesRemaining / 1440),
+            minutes: totalMinutesRemaining % 1440,
+            totalMinutesRemaining,
+            isExpired: totalMinutesRemaining <= 0
+        };
+    }
+
+    // 3. Fallback to registration-based calculation (Legacy)
+    if (!user.registeredAt) return { days: baseDays, minutes: baseMinutes, totalMinutesRemaining: (baseDays * 1440) + baseMinutes, isExpired: false };
+    
+    const regDate = user.registeredAt.toDate ? user.registeredAt.toDate() : new Date(user.registeredAt);
+    const totalAllottedMinutes = (baseDays * 1440) + baseMinutes;
+    const diffMs = new Date() - regDate;
+    const elapsedMinutes = Math.floor(diffMs / (1000 * 60));
+    const totalMinutesRemaining = Math.max(0, totalAllottedMinutes - elapsedMinutes);
+    
+    return {
+        days: Math.floor(totalMinutesRemaining / 1440),
+        minutes: totalMinutesRemaining % 1440,
+        totalMinutesRemaining,
+        isExpired: totalMinutesRemaining <= 0
+    };
+}
 
 function renderTable(docs) {
     userTableBody.innerHTML = '';
@@ -218,6 +273,8 @@ function renderTable(docs) {
         totalFiles += (user.totalFilesCleaned || 0);
         totalSize += (user.totalSizeSaved || 0);
 
+        const trial = getTrialInfo(user);
+
         const row = document.createElement('tr');
         row.innerHTML = `
             <td><strong>${user.name || 'No Name'}</strong></td>
@@ -240,11 +297,15 @@ function renderTable(docs) {
                 <span style="color: #666; font-size: 11px;">${formatSize(user.totalSizeSaved || 0)}</span>
             </td>
             <td>
-                <input type="number" value="${user.trialDays !== undefined ? user.trialDays : 14}" 
-                    style="width: 45px; font-size: 11px; padding: 2px; border: 1px solid #ccc; border-radius: 4px;" 
-                    onchange="updateUserTrial('${id}', this.value)"
-                    ${user.isPremium ? 'disabled' : ''}>
-                <span style="font-size: 9px; color: #888;"> hari</span>
+                ${user.isPremium ? 
+                    '<span style="color: #10b981; font-weight: bold; font-size: 11px;">UNLIMITED</span>' : 
+                    `<div class="trial-pill ${trial.isExpired ? 'expired' : ''}" 
+                        onclick="openTrialModal('${id}', '${user.name || 'User'}', ${trial.days}, ${trial.minutes})">
+                        <span>${trial.days}H</span>
+                        <i>:</i>
+                        <span>${trial.minutes}M</span>
+                    </div>`
+                }
             </td>
             <td>
                 <span class="status-badge ${user.status ? user.status.toLowerCase().replace('_', '') : 'registered'}">
@@ -276,22 +337,63 @@ function formatSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-// --- ACTIONS ---
-window.updateUserTrial = async (machineId, days) => {
+// --- TRIAL MODAL ACTIONS ---
+window.openTrialModal = (userId, name, days, minutes) => {
+    currentEditingUserId = userId;
+    trialModalUser.textContent = `User: ${name} (${userId.substring(0, 8)}...)`;
+    editTrialDays.value = days;
+    editTrialMinutes.value = minutes;
+    trialModal.classList.remove('hidden');
+};
+
+window.closeTrialModal = () => {
+    trialModal.classList.add('hidden');
+    currentEditingUserId = null;
+};
+
+saveTrialBtn.addEventListener('click', async () => {
+    if (!currentEditingUserId) return;
+    
+    const days = parseInt(editTrialDays.value) || 0;
+    const minutes = parseInt(editTrialMinutes.value) || 0;
+    
     try {
-        await db.collection('users').doc(machineId).update({
-            trialDays: parseInt(days) || 0
+        saveTrialBtn.disabled = true;
+        saveTrialBtn.textContent = "SAVING...";
+        
+        // Calculate new expiry timestamp: Now + (Days + Minutes)
+        const totalMinutes = (days * 1440) + minutes;
+        const expiryDate = new Date();
+        expiryDate.setMinutes(expiryDate.getMinutes() + totalMinutes);
+        
+        await db.collection('users').doc(currentEditingUserId).update({
+            trialUntil: firebase.firestore.Timestamp.fromDate(expiryDate),
+            // Legacy support: update trialDays/trialMinutes to the new "allotted" values
+            // so old apps don't immediately expire based on registration date.
+            // Formula: allotted = remaining + elapsed_since_reg
+            // But to keep it simple and clean, we'll just store trialUntil and 
+            // let the new renderer.js handle it.
+            trialDays: days,
+            trialMinutes: minutes,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
-        console.log(`Trial updated for ${machineId}: ${days} days`);
+        
+        console.log(`Trial updated for ${currentEditingUserId}: ${days}d ${minutes}m`);
+        closeTrialModal();
     } catch (err) {
         alert("Gagal update trial: " + err.message);
+    } finally {
+        saveTrialBtn.disabled = false;
+        saveTrialBtn.textContent = "OKE";
     }
-};
+});
+
+// --- PROOF MODAL ACTIONS ---
 window.viewProof = (userId) => {
     const data = userProofData[userId];
     if (!data) return;
 
-    const container = document.querySelector('.modal-body');
+    const container = document.getElementById('proof-modal-body-content');
     const history = data.history;
 
     if (!history || history.length === 0) {
@@ -301,7 +403,7 @@ window.viewProof = (userId) => {
         // Tampilkan galeri riwayat
         const sorted = [...history].reverse();
         container.innerHTML = `
-            <div style="max-height: 500px; overflow-y: auto; padding-right: 10px;">
+            <div style="max-height: 500px; overflow-y: auto; padding-right: 10px; text-align: left;">
                 <h4 style="margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 5px;">Riwayat Bukti Donasi (${sorted.length})</h4>
                 ${sorted.map((h, i) => `
                     <div style="margin-bottom: 20px; background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px solid #eee;">
@@ -321,6 +423,7 @@ window.closeProofModal = () => {
     proofModal.classList.add('hidden');
 };
 
+// --- USER ACTIONS ---
 window.approveUser = async (machineId) => {
     if (!confirm("Aktifkan fitur Premium untuk user ini?")) return;
 
@@ -388,7 +491,6 @@ window.deleteUser = async (machineId) => {
 };
 
 // --- SETTINGS LOGIC ---
-// Image Preview
 newQrInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -450,7 +552,7 @@ saveSettingsBtn.addEventListener('click', async () => {
             // Upload baru (Unsigned)
             const formData = new FormData();
             formData.append("file", qrFile);
-            formData.append("upload_preset", "buktidonasi"); // Gunakan preset yang sama agar gampang
+            formData.append("upload_preset", "buktidonasi");
 
             const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
                 method: "POST",
@@ -481,8 +583,8 @@ saveSettingsBtn.addEventListener('click', async () => {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
-        donationSettings = { qrUrl: finalQrUrl, qrPublicId: finalQrPublicId, link: newLink };
-        newQrInput.value = ''; // Reset input file
+        donationSettings = { ...donationSettings, qrUrl: finalQrUrl, qrPublicId: finalQrPublicId, link: newLink };
+        newQrInput.value = '';
         alert("Pengaturan Berhasil Disimpan!");
         loadSettings();
     } catch (err) {
@@ -540,7 +642,7 @@ deleteQrBtn.addEventListener('click', async () => {
     }
 });
 
-// --- AUTO TRANSLATE LOGIC (MANUAL BY BUTTON) ---
+// --- AUTO TRANSLATE LOGIC ---
 const btnTranslateAuto = document.getElementById('btn-translate-auto');
 if (updateMessageInput && updateMessageEnInput && btnTranslateAuto) {
     btnTranslateAuto.addEventListener('click', async () => {

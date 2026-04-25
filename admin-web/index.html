@@ -65,7 +65,7 @@
                                 <th>Donasi</th>
                                 <th>Bukti</th>
                                 <th>Impact (Files/Size)</th>
-                                <th>Trial</th>
+                                <th>Trial (H/M)</th>
                                 <th>Status</th>
                                 <th>Action</th>
                             </tr>
@@ -169,7 +169,33 @@
                 <button class="close-btn" onclick="closeProofModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <img id="modal-proof-img" src="" alt="Proof Image">
+                <div id="proof-modal-body-content">
+                    <img id="modal-proof-img" src="" alt="Proof Image">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trial Edit Modal (BARU) -->
+    <div id="trial-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>Edit User Trial</h3>
+                <button class="close-btn" onclick="closeTrialModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align: left;">
+                <p id="trial-modal-user" style="font-size: 13px; color: #666; margin-bottom: 15px; font-weight: 600;"></p>
+                <div class="form-group">
+                    <label>Sisa Hari</label>
+                    <input type="number" id="edit-trial-days" placeholder="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>Sisa Menit</label>
+                    <input type="number" id="edit-trial-minutes" placeholder="0" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                <div style="margin-top: 25px; text-align: right;">
+                    <button class="btn btn-primary" id="save-trial-btn" style="padding: 10px 25px;">OKE</button>
+                </div>
             </div>
         </div>
     </div>
