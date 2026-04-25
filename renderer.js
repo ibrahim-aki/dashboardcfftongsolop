@@ -201,6 +201,19 @@ function renderUpdateBanner() {
 const forceUpdateModal = document.getElementById('force-update-modal');
 const forceDownloadBtn = document.getElementById('force-download-btn');
 
+function isVersionLower(current, target) {
+    if (!target) return false;
+    const v1 = current.split('.').map(Number);
+    const v2 = target.split('.').map(Number);
+    for (let i = 0; i < Math.max(v1.length, v2.length); i++) {
+        const n1 = v1[i] || 0;
+        const n2 = v2[i] || 0;
+        if (n1 < n2) return true;
+        if (n1 > n2) return false;
+    }
+    return false;
+}
+
 // --- UTILS ---
 const getCacheKey = () => `cff_cache_${machineId ? machineId.substring(0, 8) : 'guest'}`;
 
@@ -295,13 +308,16 @@ async function init() {
 async function checkRegistration() {
     // A. Real-time Settings Listener (QR, Link, Update, Trial Duration)
     if (db) {
-        db.collection('settings').doc('donation').onSnapshot(doc => {
+        db.collection('settings').doc('donation').onSnapshot(async doc => {
             if (doc.exists) {
                 const data = doc.data();
                 cloudSettings = data; // Save to global state
                 
                 // 1. FORCE UPDATE CHECK (LOCKED)
-                if (data.updateLink && data.forceUpdate === true) {
+                const currentVersion = await window.api.getAppVersion();
+                const needsUpdate = data.minVersion ? (currentVersion !== data.minVersion) : true;
+
+                if (data.updateLink && data.forceUpdate === true && needsUpdate) {
                     forceUpdateModal.classList.remove('hidden');
                     forceDownloadBtn.onclick = () => window.api.openUrl(data.updateLink);
                 } else {

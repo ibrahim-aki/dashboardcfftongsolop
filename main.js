@@ -223,6 +223,10 @@ ipcMain.handle('get-firebase-config', () => {
     return firebaseConfig;
 });
 
+ipcMain.handle('get-app-version', () => {
+    return app.getVersion();
+});
+
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

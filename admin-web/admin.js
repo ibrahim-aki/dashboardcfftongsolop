@@ -56,6 +56,7 @@ const updateMessageEnInput = document.getElementById('update-message-en-input');
 const updateLinkInput = document.getElementById('update-link-input');
 const forceUpdateChk = document.getElementById('force-update-chk');
 const trialDurationInput = document.getElementById('trial-duration-input');
+const minVersionInput = document.getElementById('min-version-input');
 const saveSettingsBtn = document.getElementById('save-settings-btn');
 const statImpactFiles = document.getElementById('stat-impact-files');
 
@@ -512,6 +513,7 @@ async function loadSettings() {
             updateLinkInput.value = donationSettings.updateLink || '';
             forceUpdateChk.checked = donationSettings.forceUpdate || false;
             trialDurationInput.value = donationSettings.trialDurationDays || 15;
+            if (minVersionInput) minVersionInput.value = donationSettings.minVersion || '1.0.0';
             
             if (donationSettings.qrUrl) {
                 currentQrImg.src = donationSettings.qrUrl;
@@ -579,6 +581,7 @@ saveSettingsBtn.addEventListener('click', async () => {
             updateMessageEn: newUpdateMsgEn,
             updateLink: newUpdateLink,
             forceUpdate: forceUpdateChk.checked,
+            minVersion: minVersionInput ? minVersionInput.value : '1.0.0',
             trialDurationDays: parseInt(trialDurationInput.value) || 15,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
@@ -610,6 +613,7 @@ publishUpdateBtn.addEventListener('click', async () => {
             updateMessageEn: newUpdateMsgEn,
             updateLink: newUpdateLink,
             forceUpdate: forceUpdateChk.checked,
+            minVersion: minVersionInput ? minVersionInput.value : '1.0.0',
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
 
